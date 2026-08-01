@@ -499,7 +499,8 @@
     const range = Math.max(1, rect.height - window.innerHeight);
     filmProgress = clamp(-rect.top / range, 0, 1);
     filmTargetFrame = (prefersReducedMotion.matches ? 0 : filmProgress) * (FILM_FRAME_COUNT - 1);
-    filmCanvas.dataset.targetFrame = `${Math.round(filmTargetFrame)}`;
+    const roundedTarget = Math.round(filmTargetFrame);
+    filmCanvas.dataset.targetFrame = `${roundedTarget}`;
     filmSection.style.setProperty("--film-progress", filmProgress.toFixed(4));
     if (heroCopy) {
       const copyProgress = clamp(filmProgress / .34, 0, 1);
@@ -507,6 +508,9 @@
       heroCopy.style.transform = window.innerWidth <= 760
         ? `translate3d(0,${copyProgress * -18}px,0)`
         : `translate3d(0,calc(-43% - ${copyProgress * 24}px),0)`;
+    }
+    if (Math.abs(filmTargetFrame - filmCurrentFrame) > 18 && !filmBitmaps.has(roundedTarget) && !filmDecoding.has(roundedTarget)) {
+      loadFilmBitmap(roundedTarget);
     }
     ensureFilmBitmaps(filmTargetFrame);
     if (force) {
