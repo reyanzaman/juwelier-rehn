@@ -571,6 +571,7 @@
   const pageProgress = document.querySelector(".page-progress span");
   const storyFeatures = [...document.querySelectorAll(".story-feature")];
   const editorialBridge = document.querySelector(".editorial-bridge");
+  const introSection = document.querySelector(".intro");
   const navigationLinks = [...document.querySelectorAll('.desktop-nav a[href^="#"]')];
   const navigationSections = navigationLinks
     .map((link) => document.querySelector(link.getAttribute("href")))
@@ -596,17 +597,32 @@
       if (rect.bottom < 0 || rect.top > window.innerHeight) return;
       const media = feature.querySelector(".story-media");
       if (!media) return;
+      const image = media.querySelector("img");
+      if (!image) return;
       const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
       const mobile = window.innerWidth <= 760;
       const isWatch = feature.classList.contains("story-watch");
-      const verticalRange = mobile ? 16 : 38;
-      const horizontalRange = isWatch ? (mobile ? 12 : 34) : (mobile ? 5 : 12);
-      media.style.setProperty("--story-y", `${(.5 - progress) * verticalRange * 2}px`);
-      media.style.setProperty("--story-x", `${(progress - .5) * horizontalRange * 2}px`);
-      media.style.setProperty("--story-scale", `${1.055 + Math.abs(progress - .5) * (mobile ? .025 : .04)}`);
-      media.style.setProperty("--story-rotate", `${isWatch ? (progress - .5) * .55 : 0}deg`);
+      const verticalRange = isWatch ? (mobile ? 34 : 58) : (mobile ? 44 : 72);
+      const horizontalRange = isWatch ? (mobile ? 32 : 78) : (mobile ? 10 : 22);
+      const storyX = (progress - .5) * horizontalRange * 2;
+      const storyY = (.5 - progress) * verticalRange * 2;
+      const storyScale = (mobile ? 1.075 : 1.06) + (1 - progress) * (mobile ? .075 : .085);
+      const storyRotate = isWatch ? (progress - .5) * (mobile ? .7 : 1.15) : 0;
+      media.style.setProperty("--story-y", `${storyY}px`);
+      media.style.setProperty("--story-x", `${storyX}px`);
+      media.style.setProperty("--story-scale", `${storyScale}`);
+      media.style.setProperty("--story-rotate", `${storyRotate}deg`);
       media.style.setProperty("--story-light-x", `${24 + progress * 52}%`);
+      image.style.transform = `translate3d(${storyX}px, ${storyY}px, 0) scale(${storyScale}) rotate(${storyRotate}deg)`;
     });
+    if (introSection) {
+      const rect = introSection.getBoundingClientRect();
+      if (rect.bottom >= 0 && rect.top <= window.innerHeight) {
+        const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
+        introSection.style.setProperty("--intro-year-y", `${(progress - .5) * (window.innerWidth <= 760 ? 22 : 42)}px`);
+        introSection.style.setProperty("--intro-quote-x", `${(.5 - progress) * (window.innerWidth <= 760 ? 10 : 22)}px`);
+      }
+    }
     if (editorialBridge) {
       const rect = editorialBridge.getBoundingClientRect();
       if (rect.bottom >= 0 && rect.top <= window.innerHeight) {

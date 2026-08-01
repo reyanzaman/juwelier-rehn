@@ -93,10 +93,10 @@ async function inspect(browser, width, height, reducedMotion = false) {
     const sectionTop = await page.$eval(selector, (section) => scrollY + section.getBoundingClientRect().top);
     await page.evaluate((y) => scrollTo(0, y), sectionTop - height * .2);
     await new Promise((resolve) => setTimeout(resolve, 60));
-    const before = await page.$eval(`${selector} .story-media`, (media) => `${media.style.getPropertyValue("--story-x")}|${media.style.getPropertyValue("--story-y")}`);
+    const before = await page.$eval(`${selector} .story-media img`, (image) => getComputedStyle(image).transform);
     await page.evaluate((y) => scrollTo(0, y), sectionTop + height * .45);
     await new Promise((resolve) => setTimeout(resolve, 60));
-    const after = await page.$eval(`${selector} .story-media`, (media) => `${media.style.getPropertyValue("--story-x")}|${media.style.getPropertyValue("--story-y")}`);
+    const after = await page.$eval(`${selector} .story-media img`, (image) => getComputedStyle(image).transform);
     storyMotion.push({ selector, before, after });
   }
   await page.evaluate(() => document.querySelector("#leistungen").scrollIntoView());
