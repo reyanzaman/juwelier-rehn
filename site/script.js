@@ -340,230 +340,198 @@
     }
   });
 
-  const video = document.getElementById("hero-film");
-  const returnCanvas = document.getElementById("film-return-canvas");
-  const returnContext = returnCanvas.getContext("2d", { alpha: true });
+  const filmCanvas = document.getElementById("film-canvas");
+  const filmContext = filmCanvas.getContext("2d", { alpha: true });
   const filmSection = document.querySelector(".film");
-  let filmPlaying = false;
-  let filmEnded = false;
-  let filmFinishFrame = 0;
-  let returnScrubArmed = false;
-  let returnScrubFrame = 0;
-  let returnCurrentFrame = 219;
-  let returnTargetFrame = 219;
-  let returnDisplayedFrame = -1;
-  let returnPayloadWarmed = false;
-  let returnGeneration = 0;
-  const returnBitmaps = new Map();
-  const returnDecoding = new Set();
-  const returnMobile = window.matchMedia("(max-width: 760px)");
-  const RETURN_FRAME_COUNT = 220;
+  const heroCopy = document.getElementById("hero-copy");
+  const filmMobile = window.matchMedia("(max-width: 760px)");
+  const FILM_FRAME_COUNT = 220;
+  const filmBitmaps = new Map();
+  const filmDecoding = new Map();
+  const filmQueued = new Set();
+  let filmLoadQueue = [];
+  let filmLoadsActive = 0;
+  let filmGeneration = 0;
+  let filmCurrentFrame = 0;
+  let filmTargetFrame = 0;
+  let filmDisplayedFrame = -1;
+  let filmProgress = 0;
+  let filmScrubFrame = 0;
+  let filmReady = false;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-  function playFilm() {
-    if (prefersReducedMotion.matches) return;
-    if (filmEnded || video.ended) {
-      video.currentTime = 0;
-      filmEnded = false;
-    }
-    video.playbackRate = 1;
-    filmSection.classList.remove("is-settling", "is-settled", "is-return-scrubbing");
-    const playback = video.play();
-    if (playback?.then) {
-      playback.then(() => { filmPlaying = true; }).catch(() => { filmPlaying = false; });
-    }
-  }
+  const filmFrameUrl = (index) => `./assets/film-frames/${filmMobile.matches ? "mobile" : "desktop"}/f_${String(index + 1).padStart(4, "0")}.webp`;
 
-  video.loop = false;
-  video.muted = true;
-  video.playsInline = true;
-  if (prefersReducedMotion.matches || jumpParam !== null) {
-    video.autoplay = false;
-    video.pause();
-  }
-  video.addEventListener("loadeddata", () => video.classList.add("is-ready"));
-  video.addEventListener("playing", () => {
-    filmPlaying = true;
-    filmEnded = false;
-    video.classList.add("is-ready");
-    if (!filmFinishFrame) filmFinishFrame = requestAnimationFrame(updateFilmFinish);
-  });
-  video.addEventListener("pause", () => {
-    filmPlaying = false;
-    if (filmFinishFrame) cancelAnimationFrame(filmFinishFrame);
-    filmFinishFrame = 0;
-  });
-  video.addEventListener("ended", () => {
-    filmPlaying = false;
-    filmEnded = true;
-    filmSection.classList.remove("is-settling");
-    filmSection.classList.add("is-settled");
-    if (filmFinishFrame) cancelAnimationFrame(filmFinishFrame);
-    filmFinishFrame = 0;
-    window.setTimeout(warmReturnPayload, 120);
-  });
-
-  function updateFilmFinish() {
-    filmFinishFrame = 0;
-    if (video.paused || video.ended || !Number.isFinite(video.duration)) return;
-    const remaining = Math.max(0, video.duration - video.currentTime);
-    if (remaining < 2.55) {
-      filmSection.classList.add("is-settling");
-    } else {
-      filmSection.classList.remove("is-settling");
-    }
-    filmFinishFrame = requestAnimationFrame(updateFilmFinish);
-  }
-
-  const returnFrameUrl = (index) => `./assets/film-frames/${returnMobile.matches ? "mobile" : "desktop"}/f_${String(index + 1).padStart(4, "0")}.webp`;
-
-  function sizeReturnCanvas() {
-    const rect = returnCanvas.getBoundingClientRect();
-    const sourceWidth = returnMobile.matches ? 900 : 1600;
-    const sourceHeight = returnMobile.matches ? 900 : 900;
+  function sizeFilmCanvas() {
+    const rect = filmCanvas.getBoundingClientRect();
+    const sourceWidth = filmMobile.matches ? 900 : 1600;
+    const sourceHeight = 900;
     const sourceScale = Math.min(sourceWidth / Math.max(1, rect.width), sourceHeight / Math.max(1, rect.height));
-    const density = Math.min(window.devicePixelRatio || 1, 1.5, Math.max(1, sourceScale));
+    const density = Math.min(window.devicePixelRatio || 1, 1.25, Math.max(1, sourceScale));
     const width = Math.max(1, Math.round(rect.width * density));
     const height = Math.max(1, Math.round(rect.height * density));
-    if (returnCanvas.width !== width || returnCanvas.height !== height) {
-      returnCanvas.width = width;
-      returnCanvas.height = height;
-      returnDisplayedFrame = -1;
+    if (filmCanvas.width !== width || filmCanvas.height !== height) {
+      filmCanvas.width = width;
+      filmCanvas.height = height;
+      filmDisplayedFrame = -1;
     }
   }
 
-  function nearestReturnBitmap(index) {
-    if (returnBitmaps.has(index)) return returnBitmaps.get(index);
-    for (let offset = 1; offset < 34; offset += 1) {
-      if (returnBitmaps.has(index - offset)) return returnBitmaps.get(index - offset);
-      if (returnBitmaps.has(index + offset)) return returnBitmaps.get(index + offset);
+  function nearestFilmBitmap(index) {
+    if (filmBitmaps.has(index)) return { bitmap: filmBitmaps.get(index), index };
+    for (let offset = 1; offset < 48; offset += 1) {
+      if (filmBitmaps.has(index - offset)) return { bitmap: filmBitmaps.get(index - offset), index: index - offset };
+      if (filmBitmaps.has(index + offset)) return { bitmap: filmBitmaps.get(index + offset), index: index + offset };
     }
     return null;
   }
 
-  function drawReturnFrame(index, force = false) {
-    const rounded = clamp(Math.round(index), 0, RETURN_FRAME_COUNT - 1);
-    if (!force && rounded === returnDisplayedFrame) return;
-    const bitmap = nearestReturnBitmap(rounded);
-    if (!bitmap) return;
-    sizeReturnCanvas();
-    const cw = returnCanvas.width;
-    const ch = returnCanvas.height;
-    returnContext.clearRect(0, 0, cw, ch);
-    const scale = returnMobile.matches
-      ? Math.min(cw / bitmap.width, ch / bitmap.height) * 1.34
+  function drawFilmFrame(index, force = false) {
+    const rounded = clamp(Math.round(index), 0, FILM_FRAME_COUNT - 1);
+    if (!force && rounded === filmDisplayedFrame) return;
+    const frame = nearestFilmBitmap(rounded);
+    if (!frame) return;
+    const { bitmap } = frame;
+    sizeFilmCanvas();
+    const cw = filmCanvas.width;
+    const ch = filmCanvas.height;
+    filmContext.clearRect(0, 0, cw, ch);
+    const mobile = filmMobile.matches;
+    const scale = mobile
+      ? (cw / bitmap.width) * 1.18
       : Math.max(cw / bitmap.width, ch / bitmap.height);
     const width = bitmap.width * scale;
     const height = bitmap.height * scale;
-    const x = (cw - width) * (returnMobile.matches ? .47 : .61);
-    const y = (ch - height) * .54;
-    returnContext.drawImage(bitmap, x, y, width, height);
-    returnDisplayedFrame = rounded;
+    const x = mobile ? (cw - width) * .5 : (cw - width) * .61;
+    const y = mobile ? ch * .58 - height * .5 : (ch - height) * .5;
+    filmContext.drawImage(bitmap, x, y, width, height);
+    filmDisplayedFrame = frame.index;
+    filmCanvas.dataset.frame = `${frame.index}`;
+    if (!filmReady) {
+      filmReady = true;
+      filmCanvas.classList.add("is-ready");
+    }
   }
 
-  function ensureReturnBitmaps(center) {
-    const rounded = clamp(Math.round(center), 0, RETURN_FRAME_COUNT - 1);
-    const ahead = 28;
-    const keep = 42;
-    const low = Math.max(0, rounded - ahead);
-    const high = Math.min(RETURN_FRAME_COUNT - 1, rounded + ahead);
-    for (let index = low; index <= high; index += 1) {
-      if (returnBitmaps.has(index) || returnDecoding.has(index)) continue;
-      returnDecoding.add(index);
-      const generation = returnGeneration;
-      fetch(returnFrameUrl(index), { cache: "force-cache" })
-        .then((response) => response.blob())
-        .then((blob) => createImageBitmap(blob))
-        .then((bitmap) => {
-          returnDecoding.delete(index);
-          if (generation !== returnGeneration) {
-            bitmap.close();
-            return;
-          }
-          if (Math.abs(index - returnTargetFrame) > keep) {
-            bitmap.close();
-            return;
-          }
-          returnBitmaps.set(index, bitmap);
-          if (Math.abs(index - returnTargetFrame) < 2) drawReturnFrame(index, true);
-        })
-        .catch(() => returnDecoding.delete(index));
+  function loadFilmBitmap(index) {
+    const safeIndex = clamp(index, 0, FILM_FRAME_COUNT - 1);
+    if (filmBitmaps.has(safeIndex)) return Promise.resolve(filmBitmaps.get(safeIndex));
+    if (filmDecoding.has(safeIndex)) return filmDecoding.get(safeIndex);
+    const generation = filmGeneration;
+    const request = fetch(filmFrameUrl(safeIndex), { cache: "force-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Film frame ${safeIndex + 1} failed`);
+        return response.blob();
+      })
+      .then((blob) => createImageBitmap(blob))
+      .then((bitmap) => {
+        filmDecoding.delete(safeIndex);
+        if (generation !== filmGeneration) {
+          bitmap.close();
+          return null;
+        }
+        filmBitmaps.set(safeIndex, bitmap);
+        if (Math.abs(safeIndex - filmTargetFrame) < 2 || !filmReady) drawFilmFrame(safeIndex, true);
+        return bitmap;
+      })
+      .catch(() => {
+        filmDecoding.delete(safeIndex);
+        return null;
+      });
+    filmDecoding.set(safeIndex, request);
+    return request;
+  }
+
+  function pumpFilmQueue() {
+    while (filmLoadsActive < 8 && filmLoadQueue.length) {
+      const index = filmLoadQueue.shift();
+      filmQueued.delete(index);
+      if (filmBitmaps.has(index) || filmDecoding.has(index)) continue;
+      filmLoadsActive += 1;
+      loadFilmBitmap(index).finally(() => {
+        filmLoadsActive -= 1;
+        pumpFilmQueue();
+      });
     }
-    [...returnBitmaps.keys()].forEach((index) => {
+  }
+
+  function ensureFilmBitmaps(center) {
+    const rounded = clamp(Math.round(center), 0, FILM_FRAME_COUNT - 1);
+    const ahead = 30;
+    const keep = 46;
+    const low = Math.max(0, rounded - ahead);
+    const high = Math.min(FILM_FRAME_COUNT - 1, rounded + ahead);
+    filmLoadQueue = filmLoadQueue.filter((index) => Math.abs(index - rounded) <= keep);
+    filmQueued.clear();
+    filmLoadQueue.forEach((index) => filmQueued.add(index));
+    for (let offset = 0; offset <= ahead; offset += 1) {
+      const candidates = offset ? [rounded + offset, rounded - offset] : [rounded];
+      candidates.forEach((index) => {
+        if (index < low || index > high || filmBitmaps.has(index) || filmDecoding.has(index) || filmQueued.has(index)) return;
+        filmQueued.add(index);
+        filmLoadQueue.push(index);
+      });
+    }
+    pumpFilmQueue();
+    [...filmBitmaps.keys()].forEach((index) => {
       if (Math.abs(index - rounded) <= keep) return;
-      returnBitmaps.get(index).close();
-      returnBitmaps.delete(index);
+      filmBitmaps.get(index).close();
+      filmBitmaps.delete(index);
     });
   }
 
-  function warmReturnPayload() {
-    if (returnPayloadWarmed || prefersReducedMotion.matches) return;
-    returnPayloadWarmed = true;
-    ensureReturnBitmaps(RETURN_FRAME_COUNT - 1);
-  }
-
-  function tickReturnScrub() {
-    returnScrubFrame = 0;
-    returnCurrentFrame += (returnTargetFrame - returnCurrentFrame) * .18;
-    ensureReturnBitmaps(returnCurrentFrame);
-    drawReturnFrame(returnCurrentFrame);
-    if (Math.abs(returnTargetFrame - returnCurrentFrame) > .12) {
-      returnScrubFrame = requestAnimationFrame(tickReturnScrub);
+  function tickFilmScrub() {
+    filmScrubFrame = 0;
+    filmCurrentFrame += (filmTargetFrame - filmCurrentFrame) * .19;
+    if (Math.abs(filmTargetFrame - filmCurrentFrame) < .08) filmCurrentFrame = filmTargetFrame;
+    ensureFilmBitmaps(filmTargetFrame);
+    drawFilmFrame(filmCurrentFrame);
+    if (filmCurrentFrame !== filmTargetFrame) {
+      filmScrubFrame = requestAnimationFrame(tickFilmScrub);
     } else {
-      returnCurrentFrame = returnTargetFrame;
-      drawReturnFrame(returnTargetFrame, true);
-      if (returnTargetFrame < .2 && window.scrollY < 2) {
-        returnScrubArmed = false;
-        filmSection.classList.remove("is-return-scrubbing", "is-settled", "is-settling");
-        video.currentTime = 0;
-        filmEnded = false;
-        playFilm();
-      }
+      drawFilmFrame(filmTargetFrame, true);
     }
   }
 
-  function updateReturnScrub() {
-    if (prefersReducedMotion.matches || !filmEnded) return;
-    const distance = window.innerHeight * .72;
-    if (!returnScrubArmed && window.scrollY >= distance) {
-      returnScrubArmed = true;
-      returnCurrentFrame = RETURN_FRAME_COUNT - 1;
-      sizeReturnCanvas();
-      warmReturnPayload();
+  function updateFilmProgress(force = false) {
+    const rect = filmSection.getBoundingClientRect();
+    const range = Math.max(1, rect.height - window.innerHeight);
+    filmProgress = clamp(-rect.top / range, 0, 1);
+    filmTargetFrame = (prefersReducedMotion.matches ? 0 : filmProgress) * (FILM_FRAME_COUNT - 1);
+    filmCanvas.dataset.targetFrame = `${Math.round(filmTargetFrame)}`;
+    filmSection.style.setProperty("--film-progress", filmProgress.toFixed(4));
+    if (heroCopy) {
+      const copyProgress = clamp(filmProgress / .34, 0, 1);
+      heroCopy.style.opacity = `${1 - copyProgress}`;
+      heroCopy.style.transform = window.innerWidth <= 760
+        ? `translate3d(0,${copyProgress * -18}px,0)`
+        : `translate3d(0,calc(-43% - ${copyProgress * 24}px),0)`;
     }
-    if (!returnScrubArmed) return;
-    const progress = clamp(window.scrollY / distance, 0, 1);
-    returnTargetFrame = progress * (RETURN_FRAME_COUNT - 1);
-    filmSection.classList.add("is-return-scrubbing");
-    ensureReturnBitmaps(returnTargetFrame);
-    if (!returnScrubFrame) returnScrubFrame = requestAnimationFrame(tickReturnScrub);
+    ensureFilmBitmaps(filmTargetFrame);
+    if (force) {
+      filmCurrentFrame = filmTargetFrame;
+      drawFilmFrame(filmCurrentFrame, true);
+    } else if (!filmScrubFrame) {
+      filmScrubFrame = requestAnimationFrame(tickFilmScrub);
+    }
   }
 
-  returnMobile.addEventListener("change", () => {
-    returnGeneration += 1;
-    returnBitmaps.forEach((bitmap) => bitmap.close());
-    returnBitmaps.clear();
-    returnDecoding.clear();
-    returnPayloadWarmed = false;
-    returnScrubArmed = false;
-    returnDisplayedFrame = -1;
-    filmSection.classList.remove("is-return-scrubbing");
-    video.load();
-    if (!prefersReducedMotion.matches) playFilm();
-  });
-
-  const resumeFilmOnIntent = () => {
-    if (!prefersReducedMotion.matches && !filmEnded && video.paused) playFilm();
-  };
-  document.addEventListener("pointerdown", resumeFilmOnIntent, { once: true, passive: true });
-  document.addEventListener("touchstart", resumeFilmOnIntent, { once: true, passive: true });
-  document.addEventListener("keydown", resumeFilmOnIntent, { once: true });
-  window.addEventListener("pageshow", () => {
-    if (!prefersReducedMotion.matches && !filmEnded && video.paused) playFilm();
-  });
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && filmSection.getBoundingClientRect().bottom > 0 && !filmEnded && video.paused) playFilm();
+  filmMobile.addEventListener("change", () => {
+    filmGeneration += 1;
+    filmBitmaps.forEach((bitmap) => bitmap.close());
+    filmBitmaps.clear();
+    filmDecoding.clear();
+    filmLoadQueue = [];
+    filmQueued.clear();
+    filmDisplayedFrame = -1;
+    filmReady = false;
+    filmCanvas.classList.remove("is-ready");
+    sizeFilmCanvas();
+    loadFilmBitmap(Math.round(filmTargetFrame)).then(() => {
+      ensureFilmBitmaps(filmTargetFrame);
+      drawFilmFrame(filmTargetFrame, true);
+    });
   });
 
   const header = document.getElementById("site-header");
@@ -641,7 +609,7 @@
     if (pageProgress) pageProgress.style.transform = `scaleX(${Math.min(1, window.scrollY / scrollRange)})`;
     updateNavigation();
     updateStoryMotion();
-    updateReturnScrub();
+    updateFilmProgress();
   };
   let headerFramePending = false;
   const scheduleHeaderUpdate = () => {
@@ -763,51 +731,43 @@
   window.__jank = jank;
   requestAnimationFrame(measureJank);
   window.__filmState = () => ({
-    mode: "native-video-one-shot",
-    readyState: video.readyState,
-    paused: video.paused,
-    ended: filmEnded,
-    duration: Number.isFinite(video.duration) ? video.duration : 8,
-    currentTime: video.currentTime,
-    playbackRate: video.playbackRate,
-    loop: video.loop,
+    mode: "scroll-frame-canvas",
+    ready: filmReady,
+    frame: filmDisplayedFrame,
+    targetFrame: Math.round(filmTargetFrame),
+    progress: filmProgress,
+    frameCount: FILM_FRAME_COUNT,
+    mobileFrames: filmMobile.matches,
     reducedMotion: prefersReducedMotion.matches
   });
 
-  async function waitForFilm() {
-    if (video.readyState >= 2) return;
-    await new Promise((resolve) => {
-      const timeout = window.setTimeout(resolve, 4000);
-      video.addEventListener("loadeddata", () => {
-        window.clearTimeout(timeout);
-        resolve();
-      }, { once: true });
-      video.load();
-    });
+  async function warmFilm() {
+    sizeFilmCanvas();
+    updateFilmProgress(true);
+    await loadFilmBitmap(Math.round(filmTargetFrame));
+    ensureFilmBitmaps(filmTargetFrame);
+    drawFilmFrame(filmTargetFrame, true);
   }
 
   async function initialize() {
     setupMotion();
-    await Promise.allSettled([document.fonts?.ready || Promise.resolve(), waitForFilm()]);
-    video.classList.add("is-ready");
     if (jumpParam !== null) {
       history.scrollRestoration = "manual";
       const jump = Math.max(0, Number(jumpParam) || 0);
       window.scrollTo(0, jump);
-      video.pause();
-    } else if (!prefersReducedMotion.matches) {
-      playFilm();
     }
+    await Promise.allSettled([document.fonts?.ready || Promise.resolve(), warmFilm()]);
+    updateFilmProgress(true);
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     window.__ready = true;
   }
 
   window.addEventListener("resize", () => {
-    sizeReturnCanvas();
+    sizeFilmCanvas();
+    drawFilmFrame(filmCurrentFrame, true);
     scheduleHeaderUpdate();
   }, { passive: true });
   initialize().catch(() => {
-    video.classList.add("is-ready");
     window.__ready = true;
   });
 })();

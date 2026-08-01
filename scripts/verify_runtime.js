@@ -23,7 +23,7 @@ async function inspect(browser, width, height, reducedMotion = false) {
   await page.waitForFunction("window.__ready === true", { timeout: 15000 });
   await new Promise((resolve) => setTimeout(resolve, 500));
   const state = await page.evaluate(() => {
-    const video = document.querySelector("#hero-film");
+    const canvas = document.querySelector("#film-canvas");
     const hero = document.querySelector("#hero-title").getBoundingClientRect();
     const doc = document.documentElement;
     const textOverflow = [...document.querySelectorAll("h1,h2,h3,.service-title,.configurator-links strong")]
@@ -36,15 +36,15 @@ async function inspect(browser, width, height, reducedMotion = false) {
       ready: window.__ready,
       lang: document.documentElement.lang,
       film: window.__filmState(),
-      video: {
-        readyState: video.readyState,
-        opacity: getComputedStyle(video).opacity,
-        display: getComputedStyle(video).display,
-        width: video.getBoundingClientRect().width,
-        height: video.getBoundingClientRect().height,
-        controls: video.controls,
-        loop: video.loop
+      canvas: {
+        opacity: getComputedStyle(canvas).opacity,
+        display: getComputedStyle(canvas).display,
+        width: canvas.width,
+        height: canvas.height,
+        frame: Number(canvas.dataset.frame),
+        targetFrame: Number(canvas.dataset.targetFrame)
       },
+      videoCount: document.querySelectorAll("video").length,
       overflowX: doc.scrollWidth > doc.clientWidth,
       textOverflow,
       clippedDisplay,
@@ -59,7 +59,7 @@ async function inspect(browser, width, height, reducedMotion = false) {
       ,scrollTriggers: window.ScrollTrigger?.getAll?.().length || 0
       ,visibleNumbers: [...document.querySelectorAll(".section-index,.service-number,.materials-list>div>span,.consultation-topics li>span,.configurator-links a>span")].some((element) => getComputedStyle(element).display !== "none")
       ,mobileDockDisplay: document.querySelector(".mobile-dock") ? getComputedStyle(document.querySelector(".mobile-dock")).display : "absent"
-      ,mobileHeroButtons: getComputedStyle(document.querySelector('.hero-buttons')).display
+      ,mobileHeroButtons: document.querySelector('.hero-buttons') ? getComputedStyle(document.querySelector('.hero-buttons')).display : "absent"
       ,mobileHeroSupport: getComputedStyle(document.querySelector('.hero-support')).display
       ,bridgeRings: document.querySelectorAll('.bridge-rings').length
       ,openServiceBackground: getComputedStyle(document.querySelector('.service-rows article.is-open')).backgroundColor
@@ -107,12 +107,11 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.textOverflow.length === 0, `${width}x${height}: text overflow: ${state.textOverflow.join(", ")}`);
   assert(state.clippedDisplay.length === 0, `${width}x${height}: display text uses hidden overflow`);
   assert(state.heroInsideViewport, `${width}x${height}: hero copy leaves viewport`);
-  assert(state.film.mode === "native-video-one-shot", `${width}x${height}: native film engine did not initialize`);
-  assert(state.video.readyState >= 2 && state.video.width > 0 && state.video.height > 0 && Number(state.video.opacity) > .9, `${width}x${height}: film video is not ready and visible`);
-  assert(state.video.display === "block", `${width}x${height}: film video is hidden`);
-  assert(!state.video.controls, `${width}x${height}: native video controls are visible`);
-  assert(!state.video.loop, `${width}x${height}: film video still loops`);
-  assert(reducedMotion ? state.film.paused : true, `${width}x${height}: reduced-motion film should stay paused`);
+  assert(state.film.mode === "scroll-frame-canvas", `${width}x${height}: scroll film engine did not initialize`);
+  assert(state.film.ready && state.canvas.width > 0 && state.canvas.height > 0 && Number(state.canvas.opacity) > .9, `${width}x${height}: film canvas is not ready and visible`);
+  assert(state.canvas.display === "block", `${width}x${height}: film canvas is hidden`);
+  assert(state.videoCount === 0, `${width}x${height}: autoplay video element is still present`);
+  if (reducedMotion) assert(state.film.targetFrame === 0 && state.canvas.targetFrame === 0, `${width}x${height}: reduced-motion film should remain on its opening frame`);
   assert(state.firstServiceExpanded === "true", `${width}x${height}: service accordion initial state invalid`);
   assert(state.brandLogos.length === 12, `${width}x${height}: expected 12 watch-brand logos`);
   assert(state.brandLogos.every((logo) => logo.alt), `${width}x${height}: a watch-brand logo is missing alternative text`);
@@ -127,7 +126,7 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.bridgeRings === 0, `${width}x${height}: signature circles are still present`);
   assert(state.openServiceBackground === "rgba(0, 0, 0, 0)", `${width}x${height}: open service row still has a background fill`);
   if (width <= 760 && !reducedMotion) {
-    assert(state.mobileHeroButtons === "none" && state.mobileHeroSupport === "none", `${width}x${height}: mobile hero actions or support copy are still visible`);
+    assert((state.mobileHeroButtons === "none" || state.mobileHeroButtons === "absent") && state.mobileHeroSupport === "none", `${width}x${height}: mobile hero actions or support copy are still visible`);
     assert(state.brandDisplay === "flex" && state.brandClones === 12 && state.brandAnimation !== "none", `${width}x${height}: automatic brand marquee did not initialize`);
   } else if (width > 760) {
     assert(state.brandDisplay === "grid" && state.brandClones === 0 && state.brandAnimation === "none", `${width}x${height}: desktop watch brands did not restore the grid`);
@@ -137,21 +136,25 @@ async function inspect(browser, width, height, reducedMotion = false) {
   return { viewport: `${width}x${height}`, reducedMotion, ...state };
 }
 
-async function inspectOneShot(browser) {
+async function inspectScrollFilm(browser) {
   const page = await browser.newPage();
   const playbackUrl = new URL(url);
-  playbackUrl.search = "";
+  playbackUrl.search = "?jump=0";
   playbackUrl.hash = "film";
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
   await page.goto(playbackUrl.href, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.waitForFunction("window.__ready === true", { timeout: 15000 });
-  await page.waitForFunction("window.__filmState().ended === true", { timeout: 12000 });
-  const state = await page.evaluate(() => ({ film: window.__filmState(), video: { controls: document.querySelector("#hero-film").controls, loop: document.querySelector("#hero-film").loop } }));
-  assert(state.film.paused && state.film.ended, "one-shot film did not settle at its final frame");
-  assert(state.film.currentTime >= state.film.duration - .05, "one-shot film stopped before its final frame");
-  assert(!state.video.controls && !state.video.loop, "film controls or looping were re-enabled");
+  const range = await page.$eval("#film", (section) => section.getBoundingClientRect().height - innerHeight);
+  await page.evaluate((y) => scrollTo(0, y), range * .52);
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const forward = await page.evaluate(() => window.__filmState());
+  await page.evaluate(() => scrollTo(0, 0));
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const reverse = await page.evaluate(() => window.__filmState());
+  assert(forward.targetFrame > 90 && forward.frame > 70, `scroll film did not advance: ${JSON.stringify(forward)}`);
+  assert(reverse.targetFrame === 0 && reverse.frame < 12, `scroll film did not reverse to its opening: ${JSON.stringify(reverse)}`);
   await page.close();
-  return state;
+  return { forward, reverse };
 }
 
 (async () => {
@@ -162,8 +165,8 @@ async function inspectOneShot(browser) {
     results.push(await inspect(browser, 820, 1180));
     results.push(await inspect(browser, 390, 844));
     results.push(await inspect(browser, 390, 844, true));
-    const oneShot = await inspectOneShot(browser);
-    console.log(JSON.stringify({ pass: true, results, oneShot }, null, 2));
+    const scrollFilm = await inspectScrollFilm(browser);
+    console.log(JSON.stringify({ pass: true, results, scrollFilm }, null, 2));
   } finally {
     await browser.close();
   }
