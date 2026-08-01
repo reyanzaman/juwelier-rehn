@@ -7,7 +7,7 @@
 - Playback: autoplay once, no loop, no visible player controls; touch/keyboard fallback for mobile autoplay policies
 - Finale: continuous 1.0x / 60 fps playback with a visual settle over the final 0.9 seconds, then a held final frame
 - Mobile treatment: dedicated square film, gentle 1.46x to 1.32x zoom-out, product-led framing, and a matching blurred atmosphere behind it
-- Return journey: after the film ends and the visitor leaves the hero, a 192-frame ImageBitmap window scrubs backward on the return to the top
+- Return journey: after the film ends and the visitor leaves the hero, a 220-frame high-resolution ImageBitmap window scrubs backward on the return to the top, then hands back to the native video at frame zero
 - Reduced motion: paused opening frame
 - Scroll remains native and independent from film playback
 

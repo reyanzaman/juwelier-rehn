@@ -349,15 +349,15 @@
   let filmFinishFrame = 0;
   let returnScrubArmed = false;
   let returnScrubFrame = 0;
-  let returnCurrentFrame = 191;
-  let returnTargetFrame = 191;
+  let returnCurrentFrame = 219;
+  let returnTargetFrame = 219;
   let returnDisplayedFrame = -1;
   let returnPayloadWarmed = false;
   let returnGeneration = 0;
   const returnBitmaps = new Map();
   const returnDecoding = new Set();
   const returnMobile = window.matchMedia("(max-width: 760px)");
-  const RETURN_FRAME_COUNT = 192;
+  const RETURN_FRAME_COUNT = 220;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -420,8 +420,12 @@
 
   function sizeReturnCanvas() {
     const rect = returnCanvas.getBoundingClientRect();
-    const width = Math.max(1, Math.round(rect.width));
-    const height = Math.max(1, Math.round(rect.height));
+    const sourceWidth = returnMobile.matches ? 900 : 1600;
+    const sourceHeight = returnMobile.matches ? 900 : 900;
+    const sourceScale = Math.min(sourceWidth / Math.max(1, rect.width), sourceHeight / Math.max(1, rect.height));
+    const density = Math.min(window.devicePixelRatio || 1, 1.5, Math.max(1, sourceScale));
+    const width = Math.max(1, Math.round(rect.width * density));
+    const height = Math.max(1, Math.round(rect.height * density));
     if (returnCanvas.width !== width || returnCanvas.height !== height) {
       returnCanvas.width = width;
       returnCanvas.height = height;
@@ -509,6 +513,13 @@
     } else {
       returnCurrentFrame = returnTargetFrame;
       drawReturnFrame(returnTargetFrame, true);
+      if (returnTargetFrame < .2 && window.scrollY < 2) {
+        returnScrubArmed = false;
+        filmSection.classList.remove("is-return-scrubbing", "is-settled", "is-settling");
+        video.currentTime = 0;
+        filmEnded = false;
+        playFilm();
+      }
     }
   }
 
@@ -560,21 +571,41 @@
   const pageProgress = document.querySelector(".page-progress span");
   const storyFeatures = [...document.querySelectorAll(".story-feature")];
   const editorialBridge = document.querySelector(".editorial-bridge");
+  const navigationLinks = [...document.querySelectorAll('.desktop-nav a[href^="#"]')];
+  const navigationSections = navigationLinks
+    .map((link) => document.querySelector(link.getAttribute("href")))
+    .filter(Boolean);
+  const updateNavigation = () => {
+    const probe = Math.min(window.innerHeight * .36, 340);
+    const passed = navigationSections
+      .map((section) => ({ section, top: section.getBoundingClientRect().top }))
+      .filter(({ top }) => top <= probe)
+      .sort((a, b) => b.top - a.top);
+    const activeId = passed[0]?.section.id || "";
+    navigationLinks.forEach((link) => {
+      const active = link.getAttribute("href") === `#${activeId}`;
+      link.classList.toggle("is-active", active);
+      if (active) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+  };
   const updateStoryMotion = () => {
     if (prefersReducedMotion.matches) return;
     storyFeatures.forEach((feature) => {
       const rect = feature.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+      const media = feature.querySelector(".story-media");
+      if (!media) return;
       const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
       const mobile = window.innerWidth <= 760;
       const isWatch = feature.classList.contains("story-watch");
       const verticalRange = mobile ? 16 : 38;
       const horizontalRange = isWatch ? (mobile ? 12 : 34) : (mobile ? 5 : 12);
-      feature.style.setProperty("--story-y", `${(.5 - progress) * verticalRange * 2}px`);
-      feature.style.setProperty("--story-x", `${(progress - .5) * horizontalRange * 2}px`);
-      feature.style.setProperty("--story-scale", `${1.055 + Math.abs(progress - .5) * (mobile ? .025 : .04)}`);
-      feature.style.setProperty("--story-rotate", `${isWatch ? (progress - .5) * .55 : 0}deg`);
-      feature.style.setProperty("--story-light-x", `${24 + progress * 52}%`);
+      media.style.setProperty("--story-y", `${(.5 - progress) * verticalRange * 2}px`);
+      media.style.setProperty("--story-x", `${(progress - .5) * horizontalRange * 2}px`);
+      media.style.setProperty("--story-scale", `${1.055 + Math.abs(progress - .5) * (mobile ? .025 : .04)}`);
+      media.style.setProperty("--story-rotate", `${isWatch ? (progress - .5) * .55 : 0}deg`);
+      media.style.setProperty("--story-light-x", `${24 + progress * 52}%`);
     });
     if (editorialBridge) {
       const rect = editorialBridge.getBoundingClientRect();
@@ -592,6 +623,7 @@
     mobileDock?.classList.toggle("is-visible", window.scrollY > window.innerHeight * .62);
     const scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     if (pageProgress) pageProgress.style.transform = `scaleX(${Math.min(1, window.scrollY / scrollRange)})`;
+    updateNavigation();
     updateStoryMotion();
     updateReturnScrub();
   };
@@ -618,15 +650,6 @@
   document.querySelectorAll(".section").forEach((section) => sectionObserver.observe(section));
   if (!prefersReducedMotion.matches) document.body.classList.add("motion-ready");
 
-  const navigationLinks = [...document.querySelectorAll('.desktop-nav a[href^="#"]')];
-  const navigationSections = navigationLinks.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
-  const navigationObserver = new IntersectionObserver((entries) => {
-    const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-    if (!visible) return;
-    navigationLinks.forEach((link) => link.classList.toggle("is-active", link.getAttribute("href") === `#${visible.target.id}`));
-  }, { rootMargin: "-28% 0px -58% 0px", threshold: [0, .2, .5] });
-  navigationSections.forEach((section) => navigationObserver.observe(section));
-
   document.querySelectorAll(".service-trigger").forEach((trigger) => {
     trigger.addEventListener("click", () => {
       const article = trigger.closest("article");
@@ -642,26 +665,24 @@
     });
   });
 
-  storyFeatures.forEach((feature) => {
-    const button = feature.querySelector(".story-toggle");
-    button.addEventListener("click", () => {
-      const expanded = button.getAttribute("aria-expanded") !== "true";
-      button.setAttribute("aria-expanded", String(expanded));
-      feature.classList.toggle("is-inspecting", expanded);
-      button.querySelector("span").textContent = text(expanded ? "story.close" : "story.inspect");
-    });
-  });
-
   const brandGrid = document.querySelector(".brand-grid");
-  if (brandGrid && !prefersReducedMotion.matches) {
+  const brandMobile = window.matchMedia("(max-width: 760px)");
+  const syncBrandLoop = () => {
+    if (!brandGrid) return;
+    brandGrid.querySelectorAll("[data-brand-clone]").forEach((clone) => clone.remove());
+    brandGrid.classList.remove("is-looping");
+    if (!brandMobile.matches || prefersReducedMotion.matches) return;
     [...brandGrid.children].forEach((item) => {
       const clone = item.cloneNode(true);
+      clone.dataset.brandClone = "";
       clone.setAttribute("aria-hidden", "true");
       clone.querySelector("img")?.setAttribute("alt", "");
       brandGrid.appendChild(clone);
     });
     brandGrid.classList.add("is-looping");
-  }
+  };
+  syncBrandLoop();
+  brandMobile.addEventListener("change", syncBrandLoop);
 
   function setupMotion() {
     if (!window.gsap || prefersReducedMotion.matches) return;

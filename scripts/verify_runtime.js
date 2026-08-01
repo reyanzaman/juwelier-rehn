@@ -53,7 +53,9 @@ async function inspect(browser, width, height, reducedMotion = false) {
       ,brandLogos: [...document.querySelectorAll('.watch-brand:not([aria-hidden="true"]) img')].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
       ,brandClones: document.querySelectorAll('.watch-brand[aria-hidden="true"]').length
       ,brandAnimation: getComputedStyle(document.querySelector('.brand-grid')).animationName
+      ,brandDisplay: getComputedStyle(document.querySelector('.brand-grid')).display
       ,storyImages: [...document.querySelectorAll(".story-media img")].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
+      ,storyButtons: document.querySelectorAll(".story-toggle").length
       ,scrollTriggers: window.ScrollTrigger?.getAll?.().length || 0
       ,visibleNumbers: [...document.querySelectorAll(".section-index,.service-number,.materials-list>div>span,.consultation-topics li>span,.configurator-links a>span")].some((element) => getComputedStyle(element).display !== "none")
       ,mobileDockDisplay: document.querySelector(".mobile-dock") ? getComputedStyle(document.querySelector(".mobile-dock")).display : "absent"
@@ -86,6 +88,20 @@ async function inspect(browser, width, height, reducedMotion = false) {
   state.storyImages = await page.evaluate(() =>
     [...document.querySelectorAll(".story-media img")].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
   );
+  const storyMotion = [];
+  for (const selector of [".story-jewelry", ".story-watch"]) {
+    const sectionTop = await page.$eval(selector, (section) => scrollY + section.getBoundingClientRect().top);
+    await page.evaluate((y) => scrollTo(0, y), sectionTop - height * .2);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const before = await page.$eval(`${selector} .story-media`, (media) => `${media.style.getPropertyValue("--story-x")}|${media.style.getPropertyValue("--story-y")}`);
+    await page.evaluate((y) => scrollTo(0, y), sectionTop + height * .45);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const after = await page.$eval(`${selector} .story-media`, (media) => `${media.style.getPropertyValue("--story-x")}|${media.style.getPropertyValue("--story-y")}`);
+    storyMotion.push({ selector, before, after });
+  }
+  await page.evaluate(() => document.querySelector("#leistungen").scrollIntoView());
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const activeNavigation = await page.evaluate(() => document.querySelector(".desktop-nav a.is-active")?.getAttribute("href") || "");
   assert(state.ready, `${width}x${height}: ready gate did not fire`);
   assert(!state.overflowX, `${width}x${height}: horizontal overflow`);
   assert(state.textOverflow.length === 0, `${width}x${height}: text overflow: ${state.textOverflow.join(", ")}`);
@@ -102,6 +118,9 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.brandLogos.every((logo) => logo.alt), `${width}x${height}: a watch-brand logo is missing alternative text`);
   assert(state.brandLogos.every((logo) => logo.complete && logo.width > 0), `${width}x${height}: a watch-brand logo did not load`);
   assert(state.storyImages.length === 2 && state.storyImages.every((image) => image.complete && image.width > 0 && image.alt), `${width}x${height}: an editorial product image did not load`);
+  assert(state.storyButtons === 0, `${width}x${height}: detail controls are still present`);
+  if (!reducedMotion) assert(storyMotion.every(({ before, after }) => before && after && before !== after), `${width}x${height}: an editorial image is not responding to scroll: ${JSON.stringify(storyMotion)}`);
+  assert(activeNavigation === "#leistungen", `${width}x${height}: navigation did not highlight the current section`);
   assert(state.scrollTriggers === 0, `${width}x${height}: scrubbed ScrollTriggers should remain disabled for native-scroll smoothness`);
   assert(!state.visibleNumbers, `${width}x${height}: section numbering is still visible`);
   assert(state.mobileDockDisplay === "absent" || state.mobileDockDisplay === "none", `${width}x${height}: mobile dock is still visible`);
@@ -109,7 +128,9 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.openServiceBackground === "rgba(0, 0, 0, 0)", `${width}x${height}: open service row still has a background fill`);
   if (width <= 760 && !reducedMotion) {
     assert(state.mobileHeroButtons === "none" && state.mobileHeroSupport === "none", `${width}x${height}: mobile hero actions or support copy are still visible`);
-    assert(state.brandClones === 12 && state.brandAnimation !== "none", `${width}x${height}: automatic brand marquee did not initialize`);
+    assert(state.brandDisplay === "flex" && state.brandClones === 12 && state.brandAnimation !== "none", `${width}x${height}: automatic brand marquee did not initialize`);
+  } else if (width > 760) {
+    assert(state.brandDisplay === "grid" && state.brandClones === 0 && state.brandAnimation === "none", `${width}x${height}: desktop watch brands did not restore the grid`);
   }
   assert(errors.length === 0, `${width}x${height}: console errors: ${errors.join(" | ")}`);
   await page.close();

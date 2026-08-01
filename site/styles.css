@@ -742,17 +742,18 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
 .bridge-weave i:nth-child(2){top:51%;transform:rotate(4deg);opacity:.72}
 .bridge-weave i:nth-child(3){top:72%;transform:rotate(-2deg);opacity:.42}
 
-/* Automatic watch-brand salon */
+/* Desktop brand salon; the continuous rail is reserved for mobile. */
 .brand-marquee{
   position:relative;
-  overflow:hidden;
+  overflow:visible;
   padding:4px 0 18px;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
-  mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+  -webkit-mask-image:none;
+  mask-image:none;
 }
 .brand-grid{
-  display:flex;
-  width:max-content;
+  display:grid;
+  width:auto;
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:12px;
   margin:0;
   padding:0;
@@ -765,7 +766,7 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
 .brand-marquee:hover .brand-grid.is-looping,
 .brand-marquee:focus-within .brand-grid.is-looping{animation-play-state:paused}
 .watch-brand{
-  flex:0 0 clamp(220px,22vw,300px);
+  flex:none;
   aspect-ratio:1.65;
 }
 @keyframes brand-salon{to{transform:translate3d(calc(-50% - 6px),0,0)}}
@@ -876,10 +877,11 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
   .brand-marquee{
     margin-inline:-24px;
     padding-inline:24px;
+    overflow:hidden;
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);
     mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);
   }
-  .brand-grid{margin:0;padding:0;overflow:visible}
+  .brand-grid{display:flex;width:max-content;grid-template-columns:none;margin:0;padding:0;overflow:visible}
   .brand-grid.is-looping{animation-duration:34s}
   .watch-brand{flex:0 0 min(64vw,244px);padding:22px}
 }
