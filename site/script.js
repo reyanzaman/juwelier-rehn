@@ -408,11 +408,9 @@
     filmFinishFrame = 0;
     if (video.paused || video.ended || !Number.isFinite(video.duration)) return;
     const remaining = Math.max(0, video.duration - video.currentTime);
-    if (remaining < .9) {
-      video.playbackRate = 1;
+    if (remaining < 2.55) {
       filmSection.classList.add("is-settling");
     } else {
-      video.playbackRate = 1;
       filmSection.classList.remove("is-settling");
     }
     filmFinishFrame = requestAnimationFrame(updateFilmFinish);
@@ -561,16 +559,33 @@
   const mobileDock = document.querySelector(".mobile-dock");
   const pageProgress = document.querySelector(".page-progress span");
   const storyFeatures = [...document.querySelectorAll(".story-feature")];
+  const editorialBridge = document.querySelector(".editorial-bridge");
   const updateStoryMotion = () => {
     if (prefersReducedMotion.matches) return;
     storyFeatures.forEach((feature) => {
       const rect = feature.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > window.innerHeight) return;
       const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
-      const range = window.innerWidth <= 760 ? 10 : 24;
-      feature.style.setProperty("--story-y", `${(progress - .5) * range * 2}px`);
-      feature.style.setProperty("--story-scale", `${1.035 + Math.abs(progress - .5) * .025}`);
+      const mobile = window.innerWidth <= 760;
+      const isWatch = feature.classList.contains("story-watch");
+      const verticalRange = mobile ? 16 : 38;
+      const horizontalRange = isWatch ? (mobile ? 12 : 34) : (mobile ? 5 : 12);
+      feature.style.setProperty("--story-y", `${(.5 - progress) * verticalRange * 2}px`);
+      feature.style.setProperty("--story-x", `${(progress - .5) * horizontalRange * 2}px`);
+      feature.style.setProperty("--story-scale", `${1.055 + Math.abs(progress - .5) * (mobile ? .025 : .04)}`);
+      feature.style.setProperty("--story-rotate", `${isWatch ? (progress - .5) * .55 : 0}deg`);
+      feature.style.setProperty("--story-light-x", `${24 + progress * 52}%`);
     });
+    if (editorialBridge) {
+      const rect = editorialBridge.getBoundingClientRect();
+      if (rect.bottom >= 0 && rect.top <= window.innerHeight) {
+        const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
+        const travel = window.innerWidth <= 760 ? 18 : 56;
+        editorialBridge.style.setProperty("--bridge-left", `${(1 - progress) * -travel}px`);
+        editorialBridge.style.setProperty("--bridge-right", `${(1 - progress) * travel}px`);
+        editorialBridge.style.setProperty("--bridge-light-y", `${24 + progress * 52}%`);
+      }
+    }
   };
   const updateHeader = () => {
     header.classList.toggle("is-scrolled", window.scrollY > 28);
@@ -629,70 +644,24 @@
 
   storyFeatures.forEach((feature) => {
     const button = feature.querySelector(".story-toggle");
-    const media = feature.querySelector(".story-media");
     button.addEventListener("click", () => {
       const expanded = button.getAttribute("aria-expanded") !== "true";
       button.setAttribute("aria-expanded", String(expanded));
       feature.classList.toggle("is-inspecting", expanded);
       button.querySelector("span").textContent = text(expanded ? "story.close" : "story.inspect");
     });
-    media.addEventListener("pointermove", (event) => {
-      if (event.pointerType === "touch") return;
-      const rect = media.getBoundingClientRect();
-      const px = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-      const py = clamp((event.clientY - rect.top) / rect.height, 0, 1);
-      media.style.setProperty("--mx", `${px * 100}%`);
-      media.style.setProperty("--my", `${py * 100}%`);
-      media.style.setProperty("--story-tilt-x", `${(py - .5) * -1.5}deg`);
-      media.style.setProperty("--story-tilt-y", `${(px - .5) * 1.8}deg`);
-    });
-    media.addEventListener("pointerleave", () => {
-      media.style.setProperty("--mx", "50%");
-      media.style.setProperty("--my", "50%");
-      media.style.setProperty("--story-tilt-x", "0deg");
-      media.style.setProperty("--story-tilt-y", "0deg");
-    });
   });
 
-  const editorialBridge = document.querySelector(".editorial-bridge");
-  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
-  let bridgeFrame = 0;
-  const resetBridge = () => {
-    editorialBridge.style.setProperty("--bridge-x", "0px");
-    editorialBridge.style.setProperty("--bridge-y", "0px");
-    editorialBridge.style.setProperty("--bridge-ix", "0px");
-    editorialBridge.style.setProperty("--bridge-iy", "0px");
-    editorialBridge.style.setProperty("--bridge-glow-x", "50%");
-    editorialBridge.style.setProperty("--bridge-glow-y", "50%");
-  };
-  const toggleBridge = () => {
-    const aligned = editorialBridge.classList.toggle("is-aligned");
-    editorialBridge.setAttribute("aria-pressed", String(aligned));
-  };
-  editorialBridge.addEventListener("pointermove", (event) => {
-    if (!finePointer.matches || event.pointerType === "touch" || bridgeFrame) return;
-    bridgeFrame = requestAnimationFrame(() => {
-      bridgeFrame = 0;
-      const rect = editorialBridge.getBoundingClientRect();
-      const px = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-      const py = clamp((event.clientY - rect.top) / rect.height, 0, 1);
-      const x = (px - .5) * 18;
-      const y = (py - .5) * 10;
-      editorialBridge.style.setProperty("--bridge-x", `${x}px`);
-      editorialBridge.style.setProperty("--bridge-y", `${y}px`);
-      editorialBridge.style.setProperty("--bridge-ix", `${-x}px`);
-      editorialBridge.style.setProperty("--bridge-iy", `${-y}px`);
-      editorialBridge.style.setProperty("--bridge-glow-x", `${px * 100}%`);
-      editorialBridge.style.setProperty("--bridge-glow-y", `${py * 100}%`);
+  const brandGrid = document.querySelector(".brand-grid");
+  if (brandGrid && !prefersReducedMotion.matches) {
+    [...brandGrid.children].forEach((item) => {
+      const clone = item.cloneNode(true);
+      clone.setAttribute("aria-hidden", "true");
+      clone.querySelector("img")?.setAttribute("alt", "");
+      brandGrid.appendChild(clone);
     });
-  });
-  editorialBridge.addEventListener("pointerleave", resetBridge);
-  editorialBridge.addEventListener("click", toggleBridge);
-  editorialBridge.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    toggleBridge();
-  });
+    brandGrid.classList.add("is-looping");
+  }
 
   function setupMotion() {
     if (!window.gsap || prefersReducedMotion.matches) return;

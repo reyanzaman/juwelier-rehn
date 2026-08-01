@@ -50,11 +50,17 @@ async function inspect(browser, width, height, reducedMotion = false) {
       clippedDisplay,
       heroInsideViewport: hero.left >= 0 && hero.right <= doc.clientWidth && hero.top >= 0,
       firstServiceExpanded: document.querySelector(".service-trigger").getAttribute("aria-expanded")
-      ,brandLogos: [...document.querySelectorAll(".watch-brand img")].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
+      ,brandLogos: [...document.querySelectorAll('.watch-brand:not([aria-hidden="true"]) img')].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
+      ,brandClones: document.querySelectorAll('.watch-brand[aria-hidden="true"]').length
+      ,brandAnimation: getComputedStyle(document.querySelector('.brand-grid')).animationName
       ,storyImages: [...document.querySelectorAll(".story-media img")].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
       ,scrollTriggers: window.ScrollTrigger?.getAll?.().length || 0
       ,visibleNumbers: [...document.querySelectorAll(".section-index,.service-number,.materials-list>div>span,.consultation-topics li>span,.configurator-links a>span")].some((element) => getComputedStyle(element).display !== "none")
       ,mobileDockDisplay: document.querySelector(".mobile-dock") ? getComputedStyle(document.querySelector(".mobile-dock")).display : "absent"
+      ,mobileHeroButtons: getComputedStyle(document.querySelector('.hero-buttons')).display
+      ,mobileHeroSupport: getComputedStyle(document.querySelector('.hero-support')).display
+      ,bridgeRings: document.querySelectorAll('.bridge-rings').length
+      ,openServiceBackground: getComputedStyle(document.querySelector('.service-rows article.is-open')).backgroundColor
     };
   });
   for (const selector of [".story-jewelry", ".story-watch"]) {
@@ -75,7 +81,7 @@ async function inspect(browser, width, height, reducedMotion = false) {
     { timeout: 10000 }
   );
   state.brandLogos = await page.evaluate(() =>
-    [...document.querySelectorAll(".watch-brand img")].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
+    [...document.querySelectorAll('.watch-brand:not([aria-hidden="true"]) img')].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
   );
   state.storyImages = await page.evaluate(() =>
     [...document.querySelectorAll(".story-media img")].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
@@ -99,6 +105,12 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.scrollTriggers === 0, `${width}x${height}: scrubbed ScrollTriggers should remain disabled for native-scroll smoothness`);
   assert(!state.visibleNumbers, `${width}x${height}: section numbering is still visible`);
   assert(state.mobileDockDisplay === "absent" || state.mobileDockDisplay === "none", `${width}x${height}: mobile dock is still visible`);
+  assert(state.bridgeRings === 0, `${width}x${height}: signature circles are still present`);
+  assert(state.openServiceBackground === "rgba(0, 0, 0, 0)", `${width}x${height}: open service row still has a background fill`);
+  if (width <= 760 && !reducedMotion) {
+    assert(state.mobileHeroButtons === "none" && state.mobileHeroSupport === "none", `${width}x${height}: mobile hero actions or support copy are still visible`);
+    assert(state.brandClones === 12 && state.brandAnimation !== "none", `${width}x${height}: automatic brand marquee did not initialize`);
+  }
   assert(errors.length === 0, `${width}x${height}: console errors: ${errors.join(" | ")}`);
   await page.close();
   return { viewport: `${width}x${height}`, reducedMotion, ...state };
