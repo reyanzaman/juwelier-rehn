@@ -1155,3 +1155,79 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
 @media (prefers-reduced-motion:reduce) and (max-width:760px){
   .hero-copy{transform:none!important}
 }
+
+/* Strong, native-scroll editorial camera moves and a calmer desktop heritage salon. */
+.story-media{
+  --story-light-y:50%;
+  --story-sheen-x:-48vw;
+  --story-sheen-opacity:.1;
+  contain:paint;
+}
+.story-jewelry .story-media img{transform-origin:54% 51%}
+.story-watch .story-media img{transform-origin:61% 49%}
+.story-glow{
+  background:radial-gradient(circle clamp(220px,24vw,390px) at var(--story-light-x) var(--story-light-y),rgba(255,255,255,.36),rgba(255,244,224,.12) 42%,transparent 74%);
+  opacity:.68;
+}
+.story-media::after,
+.story-feature.in .story-media::after{
+  top:-24%;
+  right:auto;
+  bottom:-24%;
+  left:-42%;
+  width:42%;
+  opacity:var(--story-sheen-opacity);
+  background:linear-gradient(102deg,transparent 8%,rgba(255,255,255,.03) 29%,rgba(255,255,255,.34) 49%,rgba(255,250,238,.08) 66%,transparent 91%);
+  transform:translate3d(var(--story-sheen-x),0,0) skewX(-9deg);
+  animation:none!important;
+  will-change:transform,opacity;
+}
+
+@media (min-width:1051px){
+  .intro{
+    min-height:auto;
+    padding-block:88px 104px;
+  }
+  .intro::before{inset:11% 9%}
+  .intro-grid{
+    width:min(1080px,calc(100vw - 112px));
+    grid-template-columns:minmax(0,.9fr) minmax(310px,.7fr);
+    gap:64px;
+    min-height:548px;
+    padding:62px 72px;
+    border-radius:38px;
+    box-shadow:0 32px 84px rgba(72,47,42,.09),inset 0 1px rgba(255,255,255,.92);
+  }
+  .intro-grid::before{left:72px;right:72px;top:29px}
+  .intro-heading .eyebrow{margin-bottom:28px}
+  .intro h2{
+    max-width:510px;
+    font-size:clamp(54px,4.8vw,74px);
+    line-height:.94;
+    letter-spacing:-.052em;
+  }
+  .intro-year{
+    right:0;
+    bottom:-68px;
+    width:88px;
+    height:88px;
+    font-size:21px;
+  }
+  .intro-copy{
+    padding:28px 0 24px 52px;
+    font-size:16px;
+  }
+  .intro-copy>p:first-child{max-width:360px;line-height:1.68}
+  .signature-statement{
+    max-width:400px;
+    margin:44px 0 0!important;
+    padding-top:34px;
+    font-size:clamp(48px,4vw,62px);
+    line-height:.94;
+  }
+  .intro-signoff{margin-top:26px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .story-media::after{display:none!important}
+}

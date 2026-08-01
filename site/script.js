@@ -360,6 +360,7 @@
   let filmReady = false;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const mix = (from, to, progress) => from + (to - from) * progress;
 
   const filmFrameUrl = (index) => `./assets/film-frames/${filmMobile.matches ? "mobile" : "desktop"}/f_${String(index + 1).padStart(4, "0")}.webp`;
 
@@ -574,17 +575,28 @@
       const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
       const mobile = window.innerWidth <= 760;
       const isWatch = feature.classList.contains("story-watch");
-      const verticalRange = isWatch ? (mobile ? 34 : 58) : (mobile ? 44 : 72);
-      const horizontalRange = isWatch ? (mobile ? 32 : 78) : (mobile ? 10 : 22);
-      const storyX = (progress - .5) * horizontalRange * 2;
-      const storyY = (.5 - progress) * verticalRange * 2;
-      const storyScale = (mobile ? 1.075 : 1.06) + (1 - progress) * (mobile ? .075 : .085);
-      const storyRotate = isWatch ? (progress - .5) * (mobile ? .7 : 1.15) : 0;
+      const storyX = isWatch
+        ? mix(mobile ? 48 : 102, mobile ? -44 : -92, progress)
+        : mix(mobile ? -46 : -78, mobile ? 38 : 66, progress);
+      const storyY = isWatch
+        ? mix(mobile ? 58 : 76, mobile ? -54 : -82, progress)
+        : mix(mobile ? 72 : 98, mobile ? -62 : -94, progress);
+      const storyScale = isWatch
+        ? mix(mobile ? 1.22 : 1.18, mobile ? 1.13 : 1.085, progress)
+        : mix(mobile ? 1.23 : 1.2, mobile ? 1.135 : 1.09, progress);
+      const storyRotate = isWatch
+        ? mix(mobile ? .8 : 1.05, mobile ? -.65 : -.8, progress)
+        : mix(mobile ? -.35 : -.55, mobile ? .24 : .38, progress);
+      const storySheenX = mix(window.innerWidth * -.48, window.innerWidth * .78, progress);
+      const storySheenOpacity = .1 + Math.sin(progress * Math.PI) * .5;
       media.style.setProperty("--story-y", `${storyY}px`);
       media.style.setProperty("--story-x", `${storyX}px`);
       media.style.setProperty("--story-scale", `${storyScale}`);
       media.style.setProperty("--story-rotate", `${storyRotate}deg`);
-      media.style.setProperty("--story-light-x", `${24 + progress * 52}%`);
+      media.style.setProperty("--story-light-x", `${18 + progress * 66}%`);
+      media.style.setProperty("--story-light-y", `${64 - progress * 25}%`);
+      media.style.setProperty("--story-sheen-x", `${storySheenX}px`);
+      media.style.setProperty("--story-sheen-opacity", `${storySheenOpacity}`);
       image.style.transform = `translate3d(${storyX}px, ${storyY}px, 0) scale(${storyScale}) rotate(${storyRotate}deg)`;
     });
     if (introSection) {
