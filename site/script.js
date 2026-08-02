@@ -468,11 +468,11 @@
     filmContext.clearRect(0, 0, cw, ch);
     const mobile = filmMobile.matches;
     const scale = mobile
-      ? (cw / bitmap.width) * 1.12
-      : Math.max(cw / bitmap.width, ch / bitmap.height);
+      ? (cw / bitmap.width) * 1.17
+      : Math.max(cw / bitmap.width, ch / bitmap.height) * 1.025;
     const width = bitmap.width * scale;
     const height = bitmap.height * scale;
-    const x = mobile ? (cw - width) * .5 : (cw - width) * .61;
+    const x = mobile ? (cw - width) * .5 : (cw - width) * .6;
     const y = mobile ? ch * .58 - height * .5 : (ch - height) * .5;
     filmContext.drawImage(bitmap, x, y, width, height);
     filmDisplayedFrame = frame.index;
@@ -614,7 +614,7 @@
     if (!prefersReducedMotion.matches) {
       const cameraEase = filmProgress * filmProgress * (3 - 2 * filmProgress);
       const mobile = window.innerWidth <= 760;
-      const cameraScale = mix(mobile ? 1.025 : 1.035, 1, cameraEase);
+      const cameraScale = mix(mobile ? 1.035 : 1.045, 1.01, cameraEase);
       const cameraY = mix(mobile ? 4 : 6, mobile ? -3 : -4, cameraEase);
       filmCanvas.style.transform = `translate3d(0,${cameraY.toFixed(2)}px,0) scale(${cameraScale.toFixed(4)})`;
     } else {

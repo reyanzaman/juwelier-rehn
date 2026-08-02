@@ -64,6 +64,7 @@ async function inspect(browser, width, height, reducedMotion = false) {
       ,brandAnimation: getComputedStyle(document.querySelector('.brand-grid')).animationName
       ,brandDisplay: getComputedStyle(document.querySelector('.brand-grid')).display
       ,storyImages: [...document.querySelectorAll(".story-media img")].map((image) => ({ complete: image.complete, width: image.naturalWidth, alt: image.alt }))
+      ,storyMasks: [...document.querySelectorAll(".story-media img")].map((image) => getComputedStyle(image).maskImage)
       ,storyButtons: document.querySelectorAll(".story-toggle").length
       ,scrollTriggers: window.ScrollTrigger?.getAll?.().length || 0
       ,visibleNumbers: [...document.querySelectorAll(".section-index,.service-number,.materials-list>div>span,.consultation-topics li>span,.configurator-links a>span")].some((element) => getComputedStyle(element).display !== "none")
@@ -127,6 +128,7 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.brandLogos.every((logo) => logo.alt), `${width}x${height}: a watch-brand logo is missing alternative text`);
   assert(state.brandLogos.every((logo) => logo.complete && logo.width > 0), `${width}x${height}: a watch-brand logo did not load`);
   assert(state.storyImages.length === 2 && state.storyImages.every((image) => image.complete && image.width > 0 && image.alt), `${width}x${height}: an editorial product image did not load`);
+  assert(state.storyMasks.length === 2 && state.storyMasks.every((mask) => mask && mask !== "none"), `${width}x${height}: an editorial product image is missing edge feathering`);
   assert(state.storyButtons === 0, `${width}x${height}: detail controls are still present`);
   if (!reducedMotion) {
     assert(storyMotion.every(({ before, after }) => before && after && before !== after), `${width}x${height}: an editorial image is not responding to scroll: ${JSON.stringify(storyMotion)}`);

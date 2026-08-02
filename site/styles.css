@@ -1166,7 +1166,13 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
 .story-jewelry .story-media{background:#f8f4ee}
 .story-watch .story-media{background:#f8f2eb}
 .story-jewelry .story-media img,
-.story-watch .story-media img{object-fit:contain;object-position:center;transform-origin:center}
+.story-watch .story-media img{
+  object-fit:contain;
+  object-position:center;
+  transform-origin:center;
+  -webkit-mask-image:radial-gradient(ellipse 98% 94% at 50% 50%,#000 0%,#000 72%,rgba(0,0,0,.88) 81%,rgba(0,0,0,.42) 91%,transparent 100%);
+  mask-image:radial-gradient(ellipse 98% 94% at 50% 50%,#000 0%,#000 72%,rgba(0,0,0,.88) 81%,rgba(0,0,0,.42) 91%,transparent 100%);
+}
 .story-glow{
   background:radial-gradient(circle clamp(220px,24vw,390px) at var(--story-light-x) var(--story-light-y),rgba(255,255,255,.36),rgba(255,244,224,.12) 42%,transparent 74%);
   opacity:.68;
@@ -1484,14 +1490,17 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
   .consultation-trigger i::before,.consultation-trigger i::after{left:9px;top:14px;width:10px}
   .consultation-topics li.is-open .consultation-detail>p{padding:0 28px 22px 0;font-size:13px}
   .materials-list>div.is-selected .material-detail>p{padding:0 34px 22px 0;font-size:13px}
-  .story-media img,
+  .story-jewelry .story-media img,
   .story-watch .story-media img{
     top:0;
     height:100%;
     object-fit:contain;
     object-position:center 28%;
-    background:#f8f3ec;
+    -webkit-mask-image:radial-gradient(ellipse 104% 92% at 50% 45%,#000 0%,#000 68%,rgba(0,0,0,.86) 80%,rgba(0,0,0,.34) 91%,transparent 100%);
+    mask-image:radial-gradient(ellipse 104% 92% at 50% 45%,#000 0%,#000 68%,rgba(0,0,0,.86) 80%,rgba(0,0,0,.34) 91%,transparent 100%);
   }
+  .story-jewelry .story-media img{background:#f8f4ee}
+  .story-watch .story-media img{background:#f8f2eb}
 }
 
 @media (prefers-reduced-motion:reduce){
