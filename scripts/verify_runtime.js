@@ -8,6 +8,11 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function matrixValues(transform) {
+  const match = transform?.match(/matrix\(([^)]+)\)/);
+  return match ? match[1].split(",").map(Number) : [];
+}
+
 async function inspect(browser, width, height, reducedMotion = false) {
   const page = await browser.newPage();
   const errors = [];
@@ -120,7 +125,9 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.storyButtons === 0, `${width}x${height}: detail controls are still present`);
   if (!reducedMotion) {
     assert(storyMotion.every(({ before, after }) => before && after && before !== after), `${width}x${height}: an editorial image is not responding to scroll: ${JSON.stringify(storyMotion)}`);
-    assert(storyMotion.every(({ before, after }) => Number(before.match(/matrix\(([^,]+)/)?.[1]) > Number(after.match(/matrix\(([^,]+)/)?.[1])), `${width}x${height}: an editorial image is not zooming out with scroll: ${JSON.stringify(storyMotion)}`);
+    assert(storyMotion.every(({ before, after }) => matrixValues(before)[0] > matrixValues(after)[0]), `${width}x${height}: an editorial image is not zooming out with scroll: ${JSON.stringify(storyMotion)}`);
+    assert(storyMotion.every(({ before, after }) => matrixValues(before)[0] - matrixValues(after)[0] > .07), `${width}x${height}: an editorial zoom-out is too subtle: ${JSON.stringify(storyMotion)}`);
+    assert(storyMotion.every(({ before, after }) => Math.abs(matrixValues(after)[5] - matrixValues(before)[5]) > 35), `${width}x${height}: an editorial vertical camera move is too subtle: ${JSON.stringify(storyMotion)}`);
   }
   assert(activeNavigation === "#leistungen", `${width}x${height}: navigation did not highlight the current section`);
   assert(state.scrollTriggers === 0, `${width}x${height}: scrubbed ScrollTriggers should remain disabled for native-scroll smoothness`);

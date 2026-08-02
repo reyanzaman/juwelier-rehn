@@ -1163,8 +1163,10 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
   --story-sheen-opacity:.1;
   contain:paint;
 }
-.story-jewelry .story-media img{transform-origin:54% 51%}
-.story-watch .story-media img{transform-origin:61% 49%}
+.story-jewelry .story-media{background:#f8f4ee}
+.story-watch .story-media{background:#f8f2eb}
+.story-jewelry .story-media img,
+.story-watch .story-media img{object-fit:contain;object-position:center;transform-origin:center}
 .story-glow{
   background:radial-gradient(circle clamp(220px,24vw,390px) at var(--story-light-x) var(--story-light-y),rgba(255,255,255,.36),rgba(255,244,224,.12) 42%,transparent 74%);
   opacity:.68;

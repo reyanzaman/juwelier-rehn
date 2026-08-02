@@ -683,19 +683,24 @@
       if (!media) return;
       const image = media.querySelector("img");
       if (!image) return;
-      const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
+      const rawProgress = clamp(
+        ((window.innerHeight * .82) - rect.top) / ((window.innerHeight * .82) + (rect.height * .36)),
+        0,
+        1
+      );
+      const progress = rawProgress * rawProgress * (3 - (2 * rawProgress));
       const mobile = window.innerWidth <= 760;
       const isWatch = feature.classList.contains("story-watch");
       const storyX = 0;
       const storyY = isWatch
-        ? mix(mobile ? 30 : 38, mobile ? -22 : -28, progress)
-        : mix(mobile ? 34 : 42, mobile ? -24 : -30, progress);
+        ? mix(mobile ? 42 : 56, mobile ? -52 : -58, progress)
+        : mix(mobile ? 46 : 60, mobile ? -48 : -54, progress);
       const storyScale = isWatch
-        ? mix(mobile ? 1.26 : 1.24, mobile ? 1.07 : 1.06, progress)
-        : mix(mobile ? 1.28 : 1.26, mobile ? 1.08 : 1.06, progress);
+        ? mix(mobile ? 1.12 : 1.13, mobile ? .91 : .92, progress)
+        : mix(mobile ? 1.13 : 1.13, mobile ? .91 : .92, progress);
       const storyRotate = isWatch
-        ? mix(mobile ? .8 : 1.05, mobile ? -.65 : -.8, progress)
-        : mix(mobile ? -.35 : -.55, mobile ? .24 : .38, progress);
+        ? mix(mobile ? 1.1 : 1.25, mobile ? -.9 : -1.05, progress)
+        : mix(mobile ? -.8 : -.95, mobile ? .65 : .78, progress);
       const storySheenX = mix(window.innerWidth * -.48, window.innerWidth * .78, progress);
       const storySheenOpacity = .1 + Math.sin(progress * Math.PI) * .5;
       media.style.setProperty("--story-y", `${storyY}px`);
@@ -706,6 +711,7 @@
       media.style.setProperty("--story-light-y", `${64 - progress * 25}%`);
       media.style.setProperty("--story-sheen-x", `${storySheenX}px`);
       media.style.setProperty("--story-sheen-opacity", `${storySheenOpacity}`);
+      media.style.setProperty("--story-progress", progress.toFixed(4));
       image.style.transform = `translate3d(${storyX}px, ${storyY}px, 0) scale(${storyScale}) rotate(${storyRotate}deg)`;
     });
     if (introSection) {
