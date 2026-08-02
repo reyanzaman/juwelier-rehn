@@ -575,12 +575,10 @@
       const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0, 1);
       const mobile = window.innerWidth <= 760;
       const isWatch = feature.classList.contains("story-watch");
-      const storyX = isWatch
-        ? mix(mobile ? 48 : 102, mobile ? -44 : -92, progress)
-        : mix(mobile ? -46 : -78, mobile ? 38 : 66, progress);
+      const storyX = 0;
       const storyY = isWatch
-        ? mix(mobile ? 58 : 76, mobile ? -54 : -82, progress)
-        : mix(mobile ? 72 : 98, mobile ? -62 : -94, progress);
+        ? mix(mobile ? 82 : 108, mobile ? -78 : -106, progress)
+        : mix(mobile ? 92 : 120, mobile ? -88 : -116, progress);
       const storyScale = isWatch
         ? mix(mobile ? 1.22 : 1.18, mobile ? 1.13 : 1.085, progress)
         : mix(mobile ? 1.23 : 1.2, mobile ? 1.135 : 1.09, progress);
@@ -649,6 +647,21 @@
   }, { rootMargin: "0px 0px -10% 0px", threshold: .1 });
   document.querySelectorAll(".section").forEach((section) => sectionObserver.observe(section));
   if (!prefersReducedMotion.matches) document.body.classList.add("motion-ready");
+
+  const materialChoices = [...document.querySelectorAll(".material-choice")];
+  materialChoices.forEach((choice) => {
+    choice.addEventListener("click", () => {
+      const selected = choice.getAttribute("aria-pressed") !== "true";
+      materialChoices.forEach((option) => {
+        option.setAttribute("aria-pressed", "false");
+        option.closest("[role='listitem']")?.classList.remove("is-selected");
+      });
+      if (selected) {
+        choice.setAttribute("aria-pressed", "true");
+        choice.closest("[role='listitem']")?.classList.add("is-selected");
+      }
+    });
+  });
 
   document.querySelectorAll(".service-trigger").forEach((trigger) => {
     trigger.addEventListener("click", () => {
