@@ -480,6 +480,7 @@
     if (!filmReady) {
       filmReady = true;
       filmCanvas.classList.add("is-ready");
+      filmSection.classList.add("is-canvas-ready");
     }
   }
 
@@ -641,6 +642,7 @@
     filmDisplayedFrame = -1;
     filmReady = false;
     filmCanvas.classList.remove("is-ready");
+    filmSection.classList.remove("is-canvas-ready");
     sizeFilmCanvas();
     loadFilmBitmap(Math.round(filmTargetFrame)).then(() => {
       queueFilmAnchors(filmTargetFrame);

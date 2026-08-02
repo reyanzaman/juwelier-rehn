@@ -49,6 +49,10 @@ async function inspect(browser, width, height, reducedMotion = false) {
         frame: Number(canvas.dataset.frame),
         targetFrame: Number(canvas.dataset.targetFrame)
       },
+      filmFallbacks: {
+        posterOpacity: Number(getComputedStyle(document.querySelector(".film-poster")).opacity),
+        underlayOpacity: Number(getComputedStyle(document.querySelector(".film-media"), "::before").opacity)
+      },
       videoCount: document.querySelectorAll("video").length,
       overflowX: doc.scrollWidth > doc.clientWidth,
       textOverflow,
@@ -115,6 +119,7 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.film.mode === "scroll-frame-canvas", `${width}x${height}: scroll film engine did not initialize`);
   assert(state.film.ready && state.canvas.width > 0 && state.canvas.height > 0 && Number(state.canvas.opacity) > .9, `${width}x${height}: film canvas is not ready and visible`);
   assert(state.canvas.display === "block", `${width}x${height}: film canvas is hidden`);
+  assert(state.filmFallbacks.posterOpacity === 0 && state.filmFallbacks.underlayOpacity === 0, `${width}x${height}: static film fallback is ghosting beneath the animated canvas`);
   assert(state.videoCount === 0, `${width}x${height}: autoplay video element is still present`);
   if (reducedMotion) assert(state.film.targetFrame === 0 && state.canvas.targetFrame === 0, `${width}x${height}: reduced-motion film should remain on its opening frame`);
   assert(state.firstServiceExpanded === "true", `${width}x${height}: service accordion initial state invalid`);

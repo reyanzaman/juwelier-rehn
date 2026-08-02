@@ -1254,6 +1254,11 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
   object-fit:cover;
   object-position:61% 50%;
 }
+.film-poster,
+.film-media::before{transition:opacity .28s ease}
+#film-canvas{transition:opacity .28s ease}
+.film.is-canvas-ready .film-poster,
+.film.is-canvas-ready .film-media::before{opacity:0!important}
 
 .service-rows article::before{left:-22px}
 
