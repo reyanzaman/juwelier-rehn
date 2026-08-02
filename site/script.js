@@ -27,6 +27,12 @@
       "hero.line1": "Für immer beginnt",
       "hero.line2": "im Detail.",
       "hero.support": "Individuelle Trauringberatung im Herzen von Landau.",
+      "hero.beat2Eyebrow": "ZWEI RINGE. EINE WAHL.",
+      "hero.beat2Line1": "Zwei Ringe.",
+      "hero.beat2Line2": "Ein Versprechen.",
+      "hero.beat3Eyebrow": "PERSÖNLICH IN LANDAU",
+      "hero.beat3Line1": "Ihre Geschichte.",
+      "hero.beat3Line2": "In jedem Detail.",
       "hero.imageAlt": "Zwei Trauringe in Champagner-Roségold – ein floral gravierter Ring und ein polierter Ring",
       "hero.videoLabel": "Zwei Trauringe in Champagner-Roségold schweben in warmem Licht",
       "hero.scroll": "Entdecken",
@@ -55,6 +61,11 @@
       "consultation.topic3": "Edelsteine & Gestaltung",
       "consultation.topic4": "Gravur & persönliche Wünsche",
       "consultation.topic5": "Tragehand & Alltag",
+      "consultation.topic1Detail": "Wir messen Ringgrößen, vergleichen Breiten und Innenprofile und achten darauf, wie sich der Ring bei Bewegung anfühlt.",
+      "consultation.topic2Detail": "Wir legen Farben, Härte, Pflege und Oberflächen direkt nebeneinander, damit Unterschiede spürbar und sichtbar werden.",
+      "consultation.topic3Detail": "Wir besprechen Fassung, Proportion und Alltagstauglichkeit – vom feinen Akzent bis zum prägenden Stein.",
+      "consultation.topic4Detail": "Text, Datum, Symbol oder persönliche Handschrift: Wir klären, was technisch möglich und dauerhaft lesbar ist.",
+      "consultation.topic5Detail": "Beruf, Bewegung, Nachbarringe und Gewohnheiten bestimmen mit, welche Form im Alltag wirklich passt.",
       "story.jewelryEyebrow": "SCHMUCK FÜR IHR JA",
       "story.jewelryTitle": "Ein Detail, das den Moment trägt.",
       "story.jewelryBody": "Ringe und Schmuckstücke, die Ihre Handschrift aufnehmen – persönlich ausgewählt und für lange Zeit gedacht.",
@@ -78,6 +89,14 @@
       "materials.titanium": "Titan",
       "materials.steel": "Edelstahl",
       "materials.alloys": "Individuelle Legierungen",
+      "materials.yellowDetail": "Warm, klassisch und vielseitig – mit einer Farbe, die besonders weich mit der Haut wirkt.",
+      "materials.whiteDetail": "Kühl und zurückhaltend, mit einer hellen Oberfläche für einen präzisen, modernen Ausdruck.",
+      "materials.silverDetail": "Hell und lebendig – eine klare, zugängliche Wahl für Schmuck mit leichtem Charakter.",
+      "materials.platinumDetail": "Dicht, selten und beständig; ideal für ein wertiges Gewicht und dauerhaft helle Farbe.",
+      "materials.tantalumDetail": "Dunkel, markant und zeitgemäß – mit einer charaktervollen Tiefe zwischen Grau und Anthrazit.",
+      "materials.titaniumDetail": "Außergewöhnlich leicht und robust, angenehm für Menschen, die ihren Ring kaum spüren möchten.",
+      "materials.steelDetail": "Klar, widerstandsfähig und pflegeleicht – eine sachliche Ästhetik für jeden Tag.",
+      "materials.alloysDetail": "Farbton, Härte und Wirkung werden individuell abgestimmt, damit Material und Entwurf zusammenfinden.",
       "services.eyebrow": "KÖNNEN, DAS BLEIBT",
       "services.title": "Für Schmuckstücke und Zeitmesser.",
       "services.rings.title": "Trauringberatung",
@@ -162,6 +181,12 @@
       "hero.line1": "Forever begins",
       "hero.line2": "in the details.",
       "hero.support": "Personal wedding-ring consultation in the heart of Landau.",
+      "hero.beat2Eyebrow": "TWO RINGS. ONE CHOICE.",
+      "hero.beat2Line1": "Two rings.",
+      "hero.beat2Line2": "One promise.",
+      "hero.beat3Eyebrow": "PERSONAL IN LANDAU",
+      "hero.beat3Line1": "Your story.",
+      "hero.beat3Line2": "In every detail.",
       "hero.imageAlt": "Two champagne rose-gold wedding rings – one floral engraved ring and one polished ring",
       "hero.videoLabel": "Two champagne rose-gold rings floating in warm light",
       "hero.scroll": "Discover",
@@ -190,6 +215,11 @@
       "consultation.topic3": "Gemstones & design",
       "consultation.topic4": "Engraving & personal preferences",
       "consultation.topic5": "Wearing hand & everyday life",
+      "consultation.topic1Detail": "We measure ring sizes, compare widths and inner profiles, and pay attention to how the ring feels in motion.",
+      "consultation.topic2Detail": "We place colors, hardness, care, and finishes side by side so their differences become visible and tangible.",
+      "consultation.topic3Detail": "We discuss settings, proportions, and everyday practicality – from a fine accent to a defining stone.",
+      "consultation.topic4Detail": "Text, date, symbol, or personal handwriting: we clarify what is technically possible and will remain legible.",
+      "consultation.topic5Detail": "Work, movement, neighboring rings, and habits all help determine which form truly suits daily life.",
       "story.jewelryEyebrow": "JEWELRY FOR YOUR YES",
       "story.jewelryTitle": "A detail that carries the moment.",
       "story.jewelryBody": "Rings and jewelry that reflect your signature – personally selected and made to stay with you.",
@@ -213,6 +243,14 @@
       "materials.titanium": "Titanium",
       "materials.steel": "Stainless steel",
       "materials.alloys": "Individual alloys",
+      "materials.yellowDetail": "Warm, classic, and versatile – with a color that feels especially soft against the skin.",
+      "materials.whiteDetail": "Cool and understated, with a bright surface for a precise, modern expression.",
+      "materials.silverDetail": "Bright and lively – a clear, approachable choice for jewelry with a light character.",
+      "materials.platinumDetail": "Dense, rare, and enduring; ideal for substantial weight and a permanently bright color.",
+      "materials.tantalumDetail": "Dark, distinctive, and contemporary – with expressive depth between gray and anthracite.",
+      "materials.titaniumDetail": "Exceptionally light and robust, comfortable for anyone who prefers to barely feel their ring.",
+      "materials.steelDetail": "Clear, resilient, and easy to care for – a pared-back aesthetic for every day.",
+      "materials.alloysDetail": "Color, hardness, and effect are individually balanced so material and design come together.",
       "services.eyebrow": "SKILL THAT LASTS",
       "services.title": "For jewelry and timepieces.",
       "services.rings.title": "Wedding-ring consultation",
@@ -344,6 +382,7 @@
   const filmContext = filmCanvas.getContext("2d", { alpha: true });
   const filmSection = document.querySelector(".film");
   const heroCopy = document.getElementById("hero-copy");
+  const heroBeats = [...document.querySelectorAll(".hero-beat")];
   const filmMobile = window.matchMedia("(max-width: 760px)");
   const FILM_FRAME_COUNT = 220;
   const filmBitmaps = new Map();
@@ -504,11 +543,38 @@
     filmCanvas.dataset.targetFrame = `${roundedTarget}`;
     filmSection.style.setProperty("--film-progress", filmProgress.toFixed(4));
     if (heroCopy) {
-      const copyProgress = clamp(filmProgress / .34, 0, 1);
-      heroCopy.style.opacity = `${1 - copyProgress}`;
-      heroCopy.style.transform = window.innerWidth <= 760
-        ? `translate3d(0,${copyProgress * -18}px,0)`
-        : `translate3d(0,calc(-43% - ${copyProgress * 24}px),0)`;
+      heroCopy.style.opacity = "1";
+      heroCopy.style.transform = window.innerWidth <= 760 ? "none" : "translate3d(0,-43%,0)";
+      let activeBeat = 0;
+      let activeAlpha = -1;
+      heroBeats.forEach((beat, index) => {
+        const start = Number(beat.dataset.in);
+        const full = Number(beat.dataset.full);
+        const hold = Number(beat.dataset.hold);
+        const end = Number(beat.dataset.out);
+        const alpha = filmProgress < full
+          ? clamp((filmProgress - start) / Math.max(.001, full - start), 0, 1)
+          : filmProgress <= hold
+            ? 1
+            : clamp(1 - ((filmProgress - hold) / Math.max(.001, end - hold)), 0, 1);
+        if (alpha > activeAlpha) {
+          activeAlpha = alpha;
+          activeBeat = index;
+        }
+        beat.style.opacity = alpha.toFixed(3);
+        beat.style.transform = `translate3d(0,${((1 - alpha) * 18).toFixed(2)}px,0)`;
+        beat.style.visibility = alpha > .01 ? "visible" : "hidden";
+      });
+      heroBeats.forEach((beat, index) => beat.setAttribute("aria-hidden", index === activeBeat ? "false" : "true"));
+    }
+    if (!prefersReducedMotion.matches) {
+      const cameraEase = filmProgress * filmProgress * (3 - 2 * filmProgress);
+      const mobile = window.innerWidth <= 760;
+      const cameraScale = 1 + cameraEase * (mobile ? .048 : .058);
+      const cameraY = cameraEase * (mobile ? -15 : -22);
+      filmCanvas.style.transform = `translate3d(0,${cameraY.toFixed(2)}px,0) scale(${cameraScale.toFixed(4)})`;
+    } else {
+      filmCanvas.style.transform = "none";
     }
     if (Math.abs(filmTargetFrame - filmCurrentFrame) > 18 && !filmBitmaps.has(roundedTarget) && !filmDecoding.has(roundedTarget)) {
       loadFilmBitmap(roundedTarget);
@@ -576,12 +642,11 @@
       const mobile = window.innerWidth <= 760;
       const isWatch = feature.classList.contains("story-watch");
       const storyX = 0;
+      const zoomWave = Math.sin(progress * Math.PI);
       const storyY = isWatch
-        ? mix(mobile ? 82 : 108, mobile ? -78 : -106, progress)
-        : mix(mobile ? 92 : 120, mobile ? -88 : -116, progress);
-      const storyScale = isWatch
-        ? mix(mobile ? 1.22 : 1.18, mobile ? 1.13 : 1.085, progress)
-        : mix(mobile ? 1.23 : 1.2, mobile ? 1.135 : 1.09, progress);
+        ? mix(mobile ? 116 : 148, mobile ? -112 : -144, progress)
+        : mix(mobile ? 126 : 158, mobile ? -122 : -154, progress);
+      const storyScale = (mobile ? 1.15 : 1.11) + zoomWave * (isWatch ? (mobile ? .23 : .21) : (mobile ? .25 : .23));
       const storyRotate = isWatch
         ? mix(mobile ? .8 : 1.05, mobile ? -.65 : -.8, progress)
         : mix(mobile ? -.35 : -.55, mobile ? .24 : .38, progress);
@@ -650,15 +715,39 @@
 
   const materialChoices = [...document.querySelectorAll(".material-choice")];
   materialChoices.forEach((choice) => {
+    const detail = document.getElementById(choice.getAttribute("aria-controls"));
+    detail?.setAttribute("aria-hidden", "true");
     choice.addEventListener("click", () => {
       const selected = choice.getAttribute("aria-pressed") !== "true";
       materialChoices.forEach((option) => {
         option.setAttribute("aria-pressed", "false");
         option.closest("[role='listitem']")?.classList.remove("is-selected");
+        document.getElementById(option.getAttribute("aria-controls"))?.setAttribute("aria-hidden", "true");
       });
       if (selected) {
         choice.setAttribute("aria-pressed", "true");
         choice.closest("[role='listitem']")?.classList.add("is-selected");
+        detail?.setAttribute("aria-hidden", "false");
+      }
+    });
+  });
+
+  const consultationTriggers = [...document.querySelectorAll(".consultation-trigger")];
+  consultationTriggers.forEach((trigger) => {
+    const detail = document.getElementById(trigger.getAttribute("aria-controls"));
+    detail?.setAttribute("aria-hidden", "true");
+    trigger.addEventListener("click", () => {
+      const row = trigger.closest("li");
+      const open = trigger.getAttribute("aria-expanded") !== "true";
+      consultationTriggers.forEach((option) => {
+        option.setAttribute("aria-expanded", "false");
+        option.closest("li")?.classList.remove("is-open");
+        document.getElementById(option.getAttribute("aria-controls"))?.setAttribute("aria-hidden", "true");
+      });
+      if (open) {
+        trigger.setAttribute("aria-expanded", "true");
+        row?.classList.add("is-open");
+        detail?.setAttribute("aria-hidden", "false");
       }
     });
   });

@@ -12,7 +12,7 @@
   <link rel="preload" href="./assets/rings-film-poster.jpg" as="image" fetchpriority="high">
   <link rel="preload" href="./assets/film-frames/desktop/f_0001.webp" as="image" type="image/webp" media="(min-width: 761px)">
   <link rel="preload" href="./assets/film-frames/mobile/f_0001.webp" as="image" type="image/webp" media="(max-width: 760px)">
-  <link rel="stylesheet" href="./styles.css?v=20260802e">
+  <link rel="stylesheet" href="./styles.css?v=20260802f">
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="a11y.skip">Zum Inhalt springen</a>
@@ -73,12 +73,28 @@
         </div>
 
         <div class="hero-copy" id="hero-copy">
-          <p class="eyebrow entrance" data-i18n="hero.eyebrow">JUWELIER C. REHN · SEIT 1869</p>
-          <h1 id="hero-title" class="hero-title">
-            <span class="hero-line"><span class="entrance" data-i18n="hero.line1">Für immer beginnt</span></span>
-            <span class="hero-line hero-line-emphasis"><span class="entrance" data-i18n="hero.line2">im Detail.</span></span>
-          </h1>
-          <p class="hero-support entrance" data-i18n="hero.support">Individuelle Trauringberatung im Herzen von Landau.</p>
+          <div class="hero-beat" data-in="-0.05" data-full="0" data-hold="0.18" data-out="0.31">
+            <p class="eyebrow entrance" data-i18n="hero.eyebrow">JUWELIER C. REHN · SEIT 1869</p>
+            <h1 id="hero-title" class="hero-title">
+              <span class="hero-line"><span class="entrance" data-i18n="hero.line1">Für immer beginnt</span></span>
+              <span class="hero-line hero-line-emphasis"><span class="entrance" data-i18n="hero.line2">im Detail.</span></span>
+            </h1>
+            <p class="hero-support entrance" data-i18n="hero.support">Individuelle Trauringberatung im Herzen von Landau.</p>
+          </div>
+          <div class="hero-beat" data-in="0.20" data-full="0.30" data-hold="0.45" data-out="0.59" aria-hidden="true">
+            <p class="eyebrow" data-i18n="hero.beat2Eyebrow">ZWEI RINGE. EINE WAHL.</p>
+            <h2 class="hero-title">
+              <span class="hero-line"><span data-i18n="hero.beat2Line1">Zwei Ringe.</span></span>
+              <span class="hero-line hero-line-emphasis"><span data-i18n="hero.beat2Line2">Ein Versprechen.</span></span>
+            </h2>
+          </div>
+          <div class="hero-beat" data-in="0.50" data-full="0.62" data-hold="1.05" data-out="1.10" aria-hidden="true">
+            <p class="eyebrow" data-i18n="hero.beat3Eyebrow">PERSÖNLICH IN LANDAU</p>
+            <h2 class="hero-title">
+              <span class="hero-line"><span data-i18n="hero.beat3Line1">Ihre Geschichte.</span></span>
+              <span class="hero-line hero-line-emphasis"><span data-i18n="hero.beat3Line2">In jedem Detail.</span></span>
+            </h2>
+          </div>
         </div>
 
         <a class="hero-scroll" href="#tradition">
@@ -118,11 +134,26 @@
           <p data-i18n="consultation.body">Gemeinsam sprechen wir über die Details, die aus zwei Ringen Ihre Trauringe machen. Verfügbarkeit und Möglichkeiten klären wir persönlich im Gespräch.</p>
         </div>
         <ol class="consultation-topics">
-          <li><strong data-i18n="consultation.topic1">Ringgröße &amp; Tragegefühl</strong></li>
-          <li><strong data-i18n="consultation.topic2">Material &amp; Oberfläche</strong></li>
-          <li><strong data-i18n="consultation.topic3">Edelsteine &amp; Gestaltung</strong></li>
-          <li><strong data-i18n="consultation.topic4">Gravur &amp; persönliche Wünsche</strong></li>
-          <li><strong data-i18n="consultation.topic5">Tragehand &amp; Alltag</strong></li>
+          <li>
+            <button class="consultation-trigger" type="button" aria-expanded="false" aria-controls="consultation-detail-1"><strong data-i18n="consultation.topic1">Ringgröße &amp; Tragegefühl</strong><i aria-hidden="true"></i></button>
+            <div class="consultation-detail" id="consultation-detail-1"><p data-i18n="consultation.topic1Detail">Wir messen Ringgrößen, vergleichen Breiten und Innenprofile und achten darauf, wie sich der Ring bei Bewegung anfühlt.</p></div>
+          </li>
+          <li>
+            <button class="consultation-trigger" type="button" aria-expanded="false" aria-controls="consultation-detail-2"><strong data-i18n="consultation.topic2">Material &amp; Oberfläche</strong><i aria-hidden="true"></i></button>
+            <div class="consultation-detail" id="consultation-detail-2"><p data-i18n="consultation.topic2Detail">Wir legen Farben, Härte, Pflege und Oberflächen direkt nebeneinander, damit Unterschiede spürbar und sichtbar werden.</p></div>
+          </li>
+          <li>
+            <button class="consultation-trigger" type="button" aria-expanded="false" aria-controls="consultation-detail-3"><strong data-i18n="consultation.topic3">Edelsteine &amp; Gestaltung</strong><i aria-hidden="true"></i></button>
+            <div class="consultation-detail" id="consultation-detail-3"><p data-i18n="consultation.topic3Detail">Wir besprechen Fassung, Proportion und Alltagstauglichkeit – vom feinen Akzent bis zum prägenden Stein.</p></div>
+          </li>
+          <li>
+            <button class="consultation-trigger" type="button" aria-expanded="false" aria-controls="consultation-detail-4"><strong data-i18n="consultation.topic4">Gravur &amp; persönliche Wünsche</strong><i aria-hidden="true"></i></button>
+            <div class="consultation-detail" id="consultation-detail-4"><p data-i18n="consultation.topic4Detail">Text, Datum, Symbol oder persönliche Handschrift: Wir klären, was technisch möglich und dauerhaft lesbar ist.</p></div>
+          </li>
+          <li>
+            <button class="consultation-trigger" type="button" aria-expanded="false" aria-controls="consultation-detail-5"><strong data-i18n="consultation.topic5">Tragehand &amp; Alltag</strong><i aria-hidden="true"></i></button>
+            <div class="consultation-detail" id="consultation-detail-5"><p data-i18n="consultation.topic5Detail">Beruf, Bewegung, Nachbarringe und Gewohnheiten bestimmen mit, welche Form im Alltag wirklich passt.</p></div>
+          </li>
         </ol>
       </div>
     </section>
@@ -151,14 +182,14 @@
           </div>
         </div>
         <div class="materials-list" role="list">
-          <div role="listitem" data-tone="gold"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.yellow">Gelbgold</h3><i aria-hidden="true"></i></button></div>
-          <div role="listitem" data-tone="ivory"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.white">Weißgold</h3><i aria-hidden="true"></i></button></div>
-          <div role="listitem" data-tone="silver"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.silver">Silber</h3><i aria-hidden="true"></i></button></div>
-          <div role="listitem" data-tone="platinum"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.platinum">Platin</h3><i aria-hidden="true"></i></button></div>
-          <div role="listitem" data-tone="tantalum"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.tantalum">Tantal</h3><i aria-hidden="true"></i></button></div>
-          <div role="listitem" data-tone="titanium"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.titanium">Titan</h3><i aria-hidden="true"></i></button></div>
-          <div role="listitem" data-tone="steel"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.steel">Edelstahl</h3><i aria-hidden="true"></i></button></div>
-          <div role="listitem" data-tone="rose"><button class="material-choice" type="button" aria-pressed="false"><h3 data-i18n="materials.alloys">Individuelle Legierungen</h3><i aria-hidden="true"></i></button></div>
+          <div role="listitem" data-tone="gold"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-yellow"><h3 data-i18n="materials.yellow">Gelbgold</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-yellow"><p data-i18n="materials.yellowDetail">Warm, klassisch und vielseitig – mit einer Farbe, die besonders weich mit der Haut wirkt.</p></div></div>
+          <div role="listitem" data-tone="ivory"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-white"><h3 data-i18n="materials.white">Weißgold</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-white"><p data-i18n="materials.whiteDetail">Kühl und zurückhaltend, mit einer hellen Oberfläche für einen präzisen, modernen Ausdruck.</p></div></div>
+          <div role="listitem" data-tone="silver"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-silver"><h3 data-i18n="materials.silver">Silber</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-silver"><p data-i18n="materials.silverDetail">Hell und lebendig – eine klare, zugängliche Wahl für Schmuck mit leichtem Charakter.</p></div></div>
+          <div role="listitem" data-tone="platinum"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-platinum"><h3 data-i18n="materials.platinum">Platin</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-platinum"><p data-i18n="materials.platinumDetail">Dicht, selten und beständig; ideal für ein wertiges Gewicht und dauerhaft helle Farbe.</p></div></div>
+          <div role="listitem" data-tone="tantalum"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-tantalum"><h3 data-i18n="materials.tantalum">Tantal</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-tantalum"><p data-i18n="materials.tantalumDetail">Dunkel, markant und zeitgemäß – mit einer charaktervollen Tiefe zwischen Grau und Anthrazit.</p></div></div>
+          <div role="listitem" data-tone="titanium"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-titanium"><h3 data-i18n="materials.titanium">Titan</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-titanium"><p data-i18n="materials.titaniumDetail">Außergewöhnlich leicht und robust, angenehm für Menschen, die ihren Ring kaum spüren möchten.</p></div></div>
+          <div role="listitem" data-tone="steel"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-steel"><h3 data-i18n="materials.steel">Edelstahl</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-steel"><p data-i18n="materials.steelDetail">Klar, widerstandsfähig und pflegeleicht – eine sachliche Ästhetik für jeden Tag.</p></div></div>
+          <div role="listitem" data-tone="rose"><button class="material-choice" type="button" aria-pressed="false" aria-controls="material-detail-alloys"><h3 data-i18n="materials.alloys">Individuelle Legierungen</h3><i aria-hidden="true"></i></button><div class="material-detail" id="material-detail-alloys"><p data-i18n="materials.alloysDetail">Farbton, Härte und Wirkung werden individuell abgestimmt, damit Material und Entwurf zusammenfinden.</p></div></div>
         </div>
       </div>
     </section>
@@ -377,6 +408,6 @@
   <noscript>Bitte aktivieren Sie JavaScript, um den Film, die interaktiven Bereiche und den Sprachwechsel zu verwenden. Alle Kontaktdaten bleiben auf dieser Seite zugänglich.</noscript>
   <script>window.__bootError=null;window.addEventListener("error",function(event){window.__bootError={message:event.message,source:event.filename,line:event.lineno,column:event.colno}});window.addEventListener("unhandledrejection",function(event){window.__bootError={message:String(event.reason)}});</script>
   <script src="./vendor/gsap.min.js"></script>
-  <script src="./script.js?v=20260802e"></script>
+  <script src="./script.js?v=20260802f"></script>
 </body>
 </html>
