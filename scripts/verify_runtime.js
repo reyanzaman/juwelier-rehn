@@ -149,21 +149,30 @@ async function inspectScrollFilm(browser) {
   await page.waitForFunction("window.__ready === true", { timeout: 15000 });
   const range = await page.$eval("#film", (section) => section.getBoundingClientRect().height - innerHeight);
   const checkpoints = [];
-  for (const progress of [.1, .24, .4, .56, .72, .9]) {
+  for (const progress of [.1, .24, .4, .56, .72, .9, .975]) {
     await page.evaluate((y) => scrollTo(0, y), range * progress);
     await new Promise((resolve) => setTimeout(resolve, 240));
-    checkpoints.push(await page.evaluate(() => window.__filmState()));
+    checkpoints.push(await page.evaluate(() => ({
+      ...window.__filmState(),
+      headerOpaque: document.querySelector("#site-header").classList.contains("is-scrolled")
+    })));
   }
   const forward = checkpoints.at(-1);
   await page.evaluate(() => scrollTo(0, 0));
   await new Promise((resolve) => setTimeout(resolve, 360));
-  const reverse = await page.evaluate(() => window.__filmState());
+  const reverse = await page.evaluate(() => ({
+    ...window.__filmState(),
+    headerOpaque: document.querySelector("#site-header").classList.contains("is-scrolled")
+  }));
   const displayedFrames = checkpoints.map((state) => state.frame);
   const distinctFrames = new Set(displayedFrames).size;
   assert(distinctFrames >= 5, `scroll film did not visibly advance through enough frames: ${JSON.stringify(checkpoints)}`);
   assert(displayedFrames.every((frame, index) => index === 0 || frame > displayedFrames[index - 1]), `scroll film frames did not advance monotonically: ${JSON.stringify(displayedFrames)}`);
-  assert(forward.targetFrame > 180 && forward.frame > 170, `scroll film did not reach its final movement: ${JSON.stringify(forward)}`);
+  assert(forward.targetFrame > 205 && forward.frame > 200, `scroll film did not reach its final movement: ${JSON.stringify(forward)}`);
+  assert(checkpoints.slice(0, -1).every((state) => !state.headerOpaque), `navbar became opaque before the film finale: ${JSON.stringify(checkpoints)}`);
+  assert(forward.headerOpaque, `navbar did not become opaque at the film finale: ${JSON.stringify(forward)}`);
   assert(reverse.targetFrame === 0 && reverse.frame < 12, `scroll film did not reverse to its opening: ${JSON.stringify(reverse)}`);
+  assert(!reverse.headerOpaque, `navbar stayed opaque after reversing to the film opening: ${JSON.stringify(reverse)}`);
   await page.close();
   return { checkpoints, forward, reverse };
 }

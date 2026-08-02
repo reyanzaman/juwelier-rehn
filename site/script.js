@@ -659,6 +659,7 @@
   const navigationSections = navigationLinks
     .map((link) => document.querySelector(link.getAttribute("href")))
     .filter(Boolean);
+  const HEADER_REVEAL_PROGRESS = .965;
   const updateNavigation = () => {
     const probe = Math.min(window.innerHeight * .36, 340);
     const passed = navigationSections
@@ -727,13 +728,13 @@
     }
   };
   const updateHeader = () => {
-    header.classList.toggle("is-scrolled", window.scrollY > 28);
+    updateFilmProgress();
+    header.classList.toggle("is-scrolled", filmProgress >= HEADER_REVEAL_PROGRESS);
     mobileDock?.classList.toggle("is-visible", window.scrollY > window.innerHeight * .62);
     const scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     if (pageProgress) pageProgress.style.transform = `scaleX(${Math.min(1, window.scrollY / scrollRange)})`;
     updateNavigation();
     updateStoryMotion();
-    updateFilmProgress();
   };
   let headerFramePending = false;
   const scheduleHeaderUpdate = () => {
