@@ -118,6 +118,11 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.clippedDisplay.length === 0, `${width}x${height}: display text uses hidden overflow`);
   assert(state.heroInsideViewport, `${width}x${height}: hero copy leaves viewport`);
   assert(state.film.mode === "scroll-frame-canvas", `${width}x${height}: scroll film engine did not initialize`);
+  if (width > 760 && width <= 1024 && height > width) {
+    assert(state.film.mobileFrames, `${width}x${height}: portrait tablet did not select the portrait film frames`);
+  } else if (width > 760) {
+    assert(!state.film.mobileFrames, `${width}x${height}: landscape or desktop viewport selected portrait film frames`);
+  }
   assert(state.film.ready && state.canvas.width > 0 && state.canvas.height > 0 && Number(state.canvas.opacity) > .9, `${width}x${height}: film canvas is not ready and visible`);
   assert(state.canvas.display === "block", `${width}x${height}: film canvas is hidden`);
   assert(state.filmFallbacks.posterOpacity === 0 && state.filmFallbacks.underlayOpacity === 0, `${width}x${height}: static film fallback is ghosting beneath the animated canvas`);
@@ -217,7 +222,10 @@ async function inspectDecoderFallback(browser) {
   try {
     const results = [];
     results.push(await inspect(browser, 1440, 900));
+    results.push(await inspect(browser, 1366, 768));
+    results.push(await inspect(browser, 1024, 768));
     results.push(await inspect(browser, 820, 1180));
+    results.push(await inspect(browser, 768, 1024));
     results.push(await inspect(browser, 390, 844));
     results.push(await inspect(browser, 390, 844, true));
     const scrollFilm = await inspectScrollFilm(browser);

@@ -383,7 +383,7 @@
   const filmSection = document.querySelector(".film");
   const heroCopy = document.getElementById("hero-copy");
   const heroBeats = [...document.querySelectorAll(".hero-beat")];
-  const filmMobile = window.matchMedia("(max-width: 760px)");
+  const filmMobile = window.matchMedia("(max-width: 760px), (max-width: 1024px) and (orientation: portrait)");
   const FILM_FRAME_COUNT = 220;
   const FILM_ANCHOR_STEP = 18;
   const filmAnchorFrames = new Set([
@@ -467,13 +467,20 @@
     const ch = filmCanvas.height;
     filmContext.clearRect(0, 0, cw, ch);
     const mobile = filmMobile.matches;
+    const coverScale = Math.max(cw / bitmap.width, ch / bitmap.height);
+    const containScale = Math.min(cw / bitmap.width, ch / bitmap.height);
+    const coverCrop = 1 - Math.min(cw / (bitmap.width * coverScale), ch / (bitmap.height * coverScale));
+    const wideBlend = clamp((window.innerWidth - 1180) / 740, 0, 1);
     const scale = mobile
       ? (cw / bitmap.width) * 1.17
-      : Math.max(cw / bitmap.width, ch / bitmap.height) * 1.025;
+      : coverCrop > .16
+        ? containScale * 1.08
+        : coverScale * mix(1, 1.025, wideBlend);
     const width = bitmap.width * scale;
     const height = bitmap.height * scale;
     const x = mobile ? (cw - width) * .5 : (cw - width) * .6;
-    const y = mobile ? ch * .58 - height * .5 : (ch - height) * .5;
+    const mobileFocusY = window.innerWidth > 760 ? .63 : .58;
+    const y = mobile ? ch * mobileFocusY - height * .5 : (ch - height) * .5;
     filmContext.drawImage(bitmap, x, y, width, height);
     filmDisplayedFrame = frame.index;
     filmCanvas.dataset.frame = `${frame.index}`;
@@ -588,7 +595,7 @@
     filmSection.style.setProperty("--film-progress", filmProgress.toFixed(4));
     if (heroCopy) {
       heroCopy.style.opacity = "1";
-      heroCopy.style.transform = window.innerWidth <= 760 ? "none" : "translate3d(0,-43%,0)";
+      heroCopy.style.transform = filmMobile.matches ? "none" : "translate3d(0,-43%,0)";
       let activeBeat = 0;
       let activeAlpha = -1;
       heroBeats.forEach((beat, index) => {
@@ -613,8 +620,11 @@
     }
     if (!prefersReducedMotion.matches) {
       const cameraEase = filmProgress * filmProgress * (3 - 2 * filmProgress);
-      const mobile = window.innerWidth <= 760;
-      const cameraScale = mix(mobile ? 1.035 : 1.045, 1.01, cameraEase);
+      const mobile = filmMobile.matches;
+      const wideBlend = clamp((window.innerWidth - 1180) / 740, 0, 1);
+      const cameraScale = mobile
+        ? mix(1.035, 1.01, cameraEase)
+        : mix(mix(1.012, 1.045, wideBlend), mix(.995, 1.01, wideBlend), cameraEase);
       const cameraY = mix(mobile ? 4 : 6, mobile ? -3 : -4, cameraEase);
       filmCanvas.style.transform = `translate3d(0,${cameraY.toFixed(2)}px,0) scale(${cameraScale.toFixed(4)})`;
     } else {
