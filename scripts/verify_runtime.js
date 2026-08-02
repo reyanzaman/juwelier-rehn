@@ -47,7 +47,8 @@ async function inspect(browser, width, height, reducedMotion = false) {
         width: canvas.width,
         height: canvas.height,
         frame: Number(canvas.dataset.frame),
-        targetFrame: Number(canvas.dataset.targetFrame)
+        targetFrame: Number(canvas.dataset.targetFrame),
+        edgeFeather: canvas.dataset.edgeFeather || ""
       },
       filmFallbacks: {
         posterOpacity: Number(getComputedStyle(document.querySelector(".film-poster")).opacity),
@@ -196,6 +197,38 @@ async function inspectScrollFilm(browser) {
   return { checkpoints, forward, reverse };
 }
 
+async function inspectMediumFilmRecovery(browser) {
+  const page = await browser.newPage();
+  const playbackUrl = new URL(url);
+  playbackUrl.search = "";
+  playbackUrl.hash = "film";
+  await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 });
+  await page.goto(playbackUrl.href, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForFunction("window.__ready === true", { timeout: 15000 });
+  const initialRange = await page.$eval("#film", (section) => section.getBoundingClientRect().height - innerHeight);
+  await page.evaluate((y) => scrollTo(0, y), initialRange * .56);
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  const beforeResize = await page.evaluate(() => window.__filmState());
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+  await new Promise((resolve) => setTimeout(resolve, 260));
+  const afterResize = await page.evaluate(() => ({
+    ...window.__filmState(),
+    scrollY,
+    mask: getComputedStyle(document.querySelector("#film-canvas")).maskImage
+  }));
+  assert(beforeResize.progress > .5 && beforeResize.progress < .62, `HD film setup did not reach the intended middle frame: ${JSON.stringify(beforeResize)}`);
+  assert(afterResize.progress > .5 && afterResize.progress < .62, `HD resize skipped the film playhead: ${JSON.stringify({ beforeResize, afterResize })}`);
+  assert(afterResize.targetFrame < 150 && afterResize.frame < 160, `HD resize jumped to the ending frames: ${JSON.stringify(afterResize)}`);
+  assert(afterResize.mask && afterResize.mask !== "none" && afterResize.mask.includes("66% 52%"), `HD hero is missing its responsive feather mask: ${afterResize.mask}`);
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForFunction("window.__ready === true", { timeout: 15000 });
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  const afterReload = await page.evaluate(() => ({ ...window.__filmState(), scrollY }));
+  assert(afterReload.scrollY < 2 && afterReload.targetFrame === 0 && afterReload.frame < 8, `HD #film reload restored the ending instead of the opening: ${JSON.stringify(afterReload)}`);
+  await page.close();
+  return { beforeResize, afterResize, afterReload };
+}
+
 async function inspectDecoderFallback(browser) {
   const page = await browser.newPage();
   const playbackUrl = new URL(url);
@@ -222,15 +255,19 @@ async function inspectDecoderFallback(browser) {
   try {
     const results = [];
     results.push(await inspect(browser, 1440, 900));
+    results.push(await inspect(browser, 1424, 1180));
     results.push(await inspect(browser, 1366, 768));
     results.push(await inspect(browser, 1024, 768));
     results.push(await inspect(browser, 820, 1180));
     results.push(await inspect(browser, 768, 1024));
     results.push(await inspect(browser, 390, 844));
     results.push(await inspect(browser, 390, 844, true));
+    const tallHd = results.find((result) => result.viewport === "1424x1180");
+    assert(tallHd?.canvas.edgeFeather === "active", `1424x1180: HD letterbox edges are not feathered into the hero background`);
     const scrollFilm = await inspectScrollFilm(browser);
+    const mediumFilmRecovery = await inspectMediumFilmRecovery(browser);
     const decoderFallback = await inspectDecoderFallback(browser);
-    console.log(JSON.stringify({ pass: true, results, scrollFilm, decoderFallback }, null, 2));
+    console.log(JSON.stringify({ pass: true, results, scrollFilm, mediumFilmRecovery, decoderFallback }, null, 2));
   } finally {
     await browser.close();
   }

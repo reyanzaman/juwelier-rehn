@@ -3,6 +3,13 @@
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const jumpParam = new URLSearchParams(location.search).get("jump");
+  const filmAnchorRequested = location.hash === "#film";
+  const requestedInitialScroll = jumpParam !== null
+    ? Math.max(0, Number(jumpParam) || 0)
+    : filmAnchorRequested
+      ? 0
+      : null;
+  if (requestedInitialScroll !== null) history.scrollRestoration = "manual";
 
   document.documentElement.classList.add("has-js");
   document.body.classList.toggle("reduced-motion", prefersReducedMotion.matches);
@@ -401,6 +408,10 @@
   let filmDisplayedFrame = -1;
   let filmProgress = 0;
   let filmScrubFrame = 0;
+  let filmScrollRange = 1;
+  let filmResizeFrame = 0;
+  let filmResizeProgress = null;
+  let filmResizeWithinFilm = false;
   let filmReady = false;
   let filmDecoderMode = typeof createImageBitmap === "function" ? "image-bitmap" : "image-element";
 
@@ -456,6 +467,41 @@
     return null;
   }
 
+  function featherFilmBitmapEdges(x, y, width, height, canvasWidth, canvasHeight) {
+    const feather = Math.min(170, Math.max(72, Math.min(width, height) * .16));
+    let feathered = false;
+    filmContext.save();
+    filmContext.globalCompositeOperation = "destination-in";
+    if (y > 1) {
+      const topFade = filmContext.createLinearGradient(0, y, 0, y + feather);
+      topFade.addColorStop(0, "rgba(0,0,0,0)");
+      topFade.addColorStop(1, "rgba(0,0,0,1)");
+      filmContext.fillStyle = topFade;
+      filmContext.fillRect(0, 0, canvasWidth, canvasHeight);
+      const bottomFade = filmContext.createLinearGradient(0, y + height - feather, 0, y + height);
+      bottomFade.addColorStop(0, "rgba(0,0,0,1)");
+      bottomFade.addColorStop(1, "rgba(0,0,0,0)");
+      filmContext.fillStyle = bottomFade;
+      filmContext.fillRect(0, 0, canvasWidth, canvasHeight);
+      feathered = true;
+    }
+    if (x > 1) {
+      const leftFade = filmContext.createLinearGradient(x, 0, x + feather, 0);
+      leftFade.addColorStop(0, "rgba(0,0,0,0)");
+      leftFade.addColorStop(1, "rgba(0,0,0,1)");
+      filmContext.fillStyle = leftFade;
+      filmContext.fillRect(0, 0, canvasWidth, canvasHeight);
+      const rightFade = filmContext.createLinearGradient(x + width - feather, 0, x + width, 0);
+      rightFade.addColorStop(0, "rgba(0,0,0,1)");
+      rightFade.addColorStop(1, "rgba(0,0,0,0)");
+      filmContext.fillStyle = rightFade;
+      filmContext.fillRect(0, 0, canvasWidth, canvasHeight);
+      feathered = true;
+    }
+    filmContext.restore();
+    filmCanvas.dataset.edgeFeather = feathered ? "active" : "none";
+  }
+
   function drawFilmFrame(index, force = false) {
     const rounded = clamp(Math.round(index), 0, FILM_FRAME_COUNT - 1);
     if (!force && rounded === filmDisplayedFrame) return;
@@ -482,6 +528,8 @@
     const mobileFocusY = window.innerWidth > 760 ? .63 : .58;
     const y = mobile ? ch * mobileFocusY - height * .5 : (ch - height) * .5;
     filmContext.drawImage(bitmap, x, y, width, height);
+    if (!mobile) featherFilmBitmapEdges(x, y, width, height, cw, ch);
+    else filmCanvas.dataset.edgeFeather = "css";
     filmDisplayedFrame = frame.index;
     filmCanvas.dataset.frame = `${frame.index}`;
     if (!filmReady) {
@@ -588,6 +636,7 @@
   function updateFilmProgress(force = false) {
     const rect = filmSection.getBoundingClientRect();
     const range = Math.max(1, rect.height - window.innerHeight);
+    filmScrollRange = range;
     filmProgress = clamp(-rect.top / range, 0, 1);
     filmTargetFrame = (prefersReducedMotion.matches ? 0 : filmProgress) * (FILM_FRAME_COUNT - 1);
     const roundedTarget = Math.round(filmTargetFrame);
@@ -653,11 +702,15 @@
     filmReady = false;
     filmCanvas.classList.remove("is-ready");
     filmSection.classList.remove("is-canvas-ready");
-    sizeFilmCanvas();
-    loadFilmBitmap(Math.round(filmTargetFrame)).then(() => {
-      queueFilmAnchors(filmTargetFrame);
-      ensureFilmBitmaps(filmTargetFrame);
-      drawFilmFrame(filmTargetFrame, true);
+    requestAnimationFrame(() => {
+      sizeFilmCanvas();
+      updateFilmProgress(true);
+      const sourceTarget = filmTargetFrame;
+      loadFilmBitmap(Math.round(sourceTarget)).then(() => {
+        queueFilmAnchors(sourceTarget);
+        ensureFilmBitmaps(sourceTarget);
+        drawFilmFrame(sourceTarget, true);
+      });
     });
   });
 
@@ -941,21 +994,47 @@
 
   async function initialize() {
     setupMotion();
-    if (jumpParam !== null) {
-      history.scrollRestoration = "manual";
-      const jump = Math.max(0, Number(jumpParam) || 0);
-      window.scrollTo(0, jump);
-    }
+    if (requestedInitialScroll !== null) window.scrollTo(0, requestedInitialScroll);
     await Promise.allSettled([document.fonts?.ready || Promise.resolve(), warmFilm()]);
+    if (requestedInitialScroll !== null) window.scrollTo(0, requestedInitialScroll);
     updateFilmProgress(true);
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    if (requestedInitialScroll !== null) {
+      window.scrollTo(0, requestedInitialScroll);
+      updateFilmProgress(true);
+    }
     window.__ready = true;
   }
 
+  if (requestedInitialScroll !== null) {
+    window.addEventListener("pageshow", () => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, requestedInitialScroll);
+        updateFilmProgress(true);
+      });
+    }, { once: true });
+  }
+
   window.addEventListener("resize", () => {
-    sizeFilmCanvas();
-    drawFilmFrame(filmCurrentFrame, true);
-    scheduleHeaderUpdate();
+    if (!filmResizeFrame) {
+      filmResizeProgress = filmProgress;
+      filmResizeWithinFilm = window.scrollY <= filmScrollRange + 4;
+    }
+    cancelAnimationFrame(filmResizeFrame);
+    filmResizeFrame = requestAnimationFrame(() => {
+      filmResizeFrame = 0;
+      const progressBeforeResize = filmResizeProgress;
+      if (filmResizeWithinFilm && progressBeforeResize !== null) {
+        const nextRange = Math.max(1, filmSection.getBoundingClientRect().height - window.innerHeight);
+        window.scrollTo(0, nextRange * progressBeforeResize);
+      }
+      filmResizeProgress = null;
+      filmResizeWithinFilm = false;
+      sizeFilmCanvas();
+      updateFilmProgress(true);
+      drawFilmFrame(filmCurrentFrame, true);
+      scheduleHeaderUpdate();
+    });
   }, { passive: true });
   initialize().catch(() => {
     window.__ready = true;
