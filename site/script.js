@@ -413,6 +413,7 @@
   let filmResizeProgress = null;
   let filmResizeWithinFilm = false;
   let filmReady = false;
+  let filmLastDrawTime = 0;
   let filmDecoderMode = typeof createImageBitmap === "function" ? "image-bitmap" : "image-element";
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -444,13 +445,14 @@
   }
 
   function sizeFilmCanvas() {
-    const rect = filmCanvas.getBoundingClientRect();
+    const cssWidth = filmCanvas.clientWidth || filmCanvas.getBoundingClientRect().width;
+    const cssHeight = filmCanvas.clientHeight || filmCanvas.getBoundingClientRect().height;
     const sourceWidth = filmMobile.matches ? 900 : 1600;
     const sourceHeight = 900;
-    const sourceScale = Math.min(sourceWidth / Math.max(1, rect.width), sourceHeight / Math.max(1, rect.height));
+    const sourceScale = Math.min(sourceWidth / Math.max(1, cssWidth), sourceHeight / Math.max(1, cssHeight));
     const density = Math.min(window.devicePixelRatio || 1, 1.25, Math.max(1, sourceScale));
-    const width = Math.max(1, Math.round(rect.width * density));
-    const height = Math.max(1, Math.round(rect.height * density));
+    const width = Math.max(1, Math.round(cssWidth * density));
+    const height = Math.max(1, Math.round(cssHeight * density));
     if (filmCanvas.width !== width || filmCanvas.height !== height) {
       filmCanvas.width = width;
       filmCanvas.height = height;
@@ -460,9 +462,12 @@
 
   function nearestFilmBitmap(index) {
     if (filmBitmaps.has(index)) return { bitmap: filmBitmaps.get(index), index };
-    for (let offset = 1; offset < 48; offset += 1) {
-      if (filmBitmaps.has(index - offset)) return { bitmap: filmBitmaps.get(index - offset), index: index - offset };
-      if (filmBitmaps.has(index + offset)) return { bitmap: filmBitmaps.get(index + offset), index: index + offset };
+    const movingForward = filmDisplayedFrame < 0 || index >= filmDisplayedFrame;
+    for (let offset = 1; offset <= 6; offset += 1) {
+      const behind = movingForward ? index - offset : index + offset;
+      const ahead = movingForward ? index + offset : index - offset;
+      if (filmBitmaps.has(behind)) return { bitmap: filmBitmaps.get(behind), index: behind };
+      if (filmBitmaps.has(ahead)) return { bitmap: filmBitmaps.get(ahead), index: ahead };
     }
     return null;
   }
@@ -505,8 +510,21 @@
   function drawFilmFrame(index, force = false) {
     const rounded = clamp(Math.round(index), 0, FILM_FRAME_COUNT - 1);
     if (!force && rounded === filmDisplayedFrame) return;
-    const frame = nearestFilmBitmap(rounded);
+    const drawTime = performance.now();
+    if (filmReady && filmDisplayedFrame >= 0 && rounded !== filmDisplayedFrame && drawTime - filmLastDrawTime < 12) return;
+    let frame = nearestFilmBitmap(rounded);
     if (!frame) return;
+    if (filmReady && filmDisplayedFrame >= 0 && Math.abs(frame.index - filmDisplayedFrame) > 6) {
+      const direction = Math.sign(rounded - filmDisplayedFrame) || Math.sign(frame.index - filmDisplayedFrame);
+      if (!direction) return;
+      const limit = clamp(filmDisplayedFrame + direction * 6, 0, FILM_FRAME_COUNT - 1);
+      for (let candidate = limit; candidate !== filmDisplayedFrame; candidate -= direction) {
+        if (!filmBitmaps.has(candidate)) continue;
+        frame = { bitmap: filmBitmaps.get(candidate), index: candidate };
+        break;
+      }
+      if (Math.abs(frame.index - filmDisplayedFrame) > 6) return;
+    }
     const { bitmap } = frame;
     sizeFilmCanvas();
     const cw = filmCanvas.width;
@@ -531,6 +549,7 @@
     if (!mobile) featherFilmBitmapEdges(x, y, width, height, cw, ch);
     else filmCanvas.dataset.edgeFeather = "css";
     filmDisplayedFrame = frame.index;
+    filmLastDrawTime = drawTime;
     filmCanvas.dataset.frame = `${frame.index}`;
     if (!filmReady) {
       filmReady = true;
@@ -559,7 +578,8 @@
         filmBitmaps.set(safeIndex, bitmap);
         const displayedDistance = filmDisplayedFrame < 0 ? Infinity : Math.abs(filmDisplayedFrame - filmCurrentFrame);
         if (Math.abs(safeIndex - filmCurrentFrame) < displayedDistance || Math.abs(safeIndex - filmTargetFrame) < 2 || !filmReady) {
-          drawFilmFrame(filmCurrentFrame, true);
+          if (!filmReady) drawFilmFrame(filmCurrentFrame, true);
+          else if (!filmScrubFrame) filmScrubFrame = requestAnimationFrame(tickFilmScrub);
         }
         return bitmap;
       })
@@ -595,23 +615,36 @@
     pumpFilmQueue();
   }
 
-  function ensureFilmBitmaps(center) {
+  function ensureFilmBitmaps(center, destination = center) {
     const rounded = clamp(Math.round(center), 0, FILM_FRAME_COUNT - 1);
-    const ahead = 30;
-    const keep = 46;
-    const low = Math.max(0, rounded - ahead);
-    const high = Math.min(FILM_FRAME_COUNT - 1, rounded + ahead);
-    filmLoadQueue = filmLoadQueue.filter((index) => filmAnchorFrames.has(index) || Math.abs(index - rounded) <= keep);
+    const direction = Math.sign(destination - center);
+    const travelWindow = 34;
+    const trailingWindow = 14;
+    const keep = 54;
+    const low = Math.max(0, rounded - (direction < 0 ? travelWindow : trailingWindow));
+    const high = Math.min(FILM_FRAME_COUNT - 1, rounded + (direction > 0 ? travelWindow : trailingWindow));
+    const retainedQueue = filmLoadQueue.filter((index) => filmAnchorFrames.has(index) || Math.abs(index - rounded) <= keep);
+    const localQueue = [];
+    const retainedPending = [];
     filmQueued.clear();
-    filmLoadQueue.forEach((index) => filmQueued.add(index));
-    for (let offset = 0; offset <= ahead; offset += 1) {
-      const candidates = offset ? [rounded + offset, rounded - offset] : [rounded];
+    for (let offset = 0; offset <= travelWindow; offset += 1) {
+      const candidates = offset
+        ? direction < 0
+          ? [rounded - offset, rounded + offset]
+          : [rounded + offset, rounded - offset]
+        : [rounded];
       candidates.forEach((index) => {
         if (index < low || index > high || filmBitmaps.has(index) || filmDecoding.has(index) || filmQueued.has(index)) return;
         filmQueued.add(index);
-        filmLoadQueue.push(index);
+        localQueue.push(index);
       });
     }
+    retainedQueue.forEach((index) => {
+      if (filmBitmaps.has(index) || filmDecoding.has(index) || filmQueued.has(index)) return;
+      filmQueued.add(index);
+      retainedPending.push(index);
+    });
+    filmLoadQueue = [...localQueue, ...retainedPending];
     pumpFilmQueue();
     [...filmBitmaps.keys()].forEach((index) => {
       if (filmAnchorFrames.has(index) || Math.abs(index - rounded) <= keep) return;
@@ -622,14 +655,17 @@
 
   function tickFilmScrub() {
     filmScrubFrame = 0;
-    filmCurrentFrame += (filmTargetFrame - filmCurrentFrame) * .24;
+    filmCurrentFrame += (filmTargetFrame - filmCurrentFrame) * .14;
     if (Math.abs(filmTargetFrame - filmCurrentFrame) < .08) filmCurrentFrame = filmTargetFrame;
-    ensureFilmBitmaps(filmTargetFrame);
+    const loadingCenter = filmDisplayedFrame >= 0 && Math.abs(filmCurrentFrame - filmDisplayedFrame) > 6
+      ? filmDisplayedFrame + Math.sign(filmCurrentFrame - filmDisplayedFrame) * 6
+      : filmCurrentFrame;
+    ensureFilmBitmaps(loadingCenter, filmTargetFrame);
     drawFilmFrame(filmCurrentFrame);
-    if (filmCurrentFrame !== filmTargetFrame) {
+    if (filmCurrentFrame !== filmTargetFrame || filmDisplayedFrame !== Math.round(filmTargetFrame)) {
       filmScrubFrame = requestAnimationFrame(tickFilmScrub);
     } else {
-      drawFilmFrame(filmTargetFrame, true);
+      drawFilmFrame(filmTargetFrame);
     }
   }
 
@@ -682,7 +718,7 @@
     if (Math.abs(filmTargetFrame - filmCurrentFrame) > 18 && !filmBitmaps.has(roundedTarget) && !filmDecoding.has(roundedTarget)) {
       loadFilmBitmap(roundedTarget);
     }
-    ensureFilmBitmaps(filmTargetFrame);
+    ensureFilmBitmaps(filmCurrentFrame, filmTargetFrame);
     if (force) {
       filmCurrentFrame = filmTargetFrame;
       drawFilmFrame(filmCurrentFrame, true);
@@ -821,7 +857,7 @@
   window.addEventListener("scroll", () => {
     scheduleHeaderUpdate();
     window.clearTimeout(filmSettleTimer);
-    filmSettleTimer = window.setTimeout(() => updateFilmProgress(true), 90);
+    filmSettleTimer = window.setTimeout(() => updateFilmProgress(false), 90);
   }, { passive: true });
 
   const sectionObserver = new IntersectionObserver((entries) => {

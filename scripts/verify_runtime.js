@@ -179,7 +179,10 @@ async function inspectScrollFilm(browser) {
   }
   const forward = checkpoints.at(-1);
   await page.evaluate(() => scrollTo(0, 0));
-  await new Promise((resolve) => setTimeout(resolve, 360));
+  await page.waitForFunction(
+    "Number(document.querySelector('#film-canvas').dataset.targetFrame) === 0 && Number(document.querySelector('#film-canvas').dataset.frame) < 12",
+    { timeout: 8000 }
+  );
   const reverse = await page.evaluate(() => ({
     ...window.__filmState(),
     headerOpaque: document.querySelector("#site-header").classList.contains("is-scrolled")
@@ -195,6 +198,65 @@ async function inspectScrollFilm(browser) {
   assert(!reverse.headerOpaque, `navbar stayed opaque after reversing to the film opening: ${JSON.stringify(reverse)}`);
   await page.close();
   return { checkpoints, forward, reverse };
+}
+
+async function inspectHdContinuousPlayback(browser) {
+  const page = await browser.newPage();
+  const playbackUrl = new URL(url);
+  playbackUrl.search = "";
+  playbackUrl.hash = "film";
+  await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 });
+  await page.goto(playbackUrl.href, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForFunction("window.__ready === true", { timeout: 15000 });
+  const range = await page.$eval("#film", (section) => section.getBoundingClientRect().height - innerHeight);
+
+  async function traceTo(scrollTarget, expectedTarget) {
+    return page.evaluate(async ({ y, expected }) => {
+      scrollTo(0, y);
+      const trace = [];
+      let previousKey = "";
+      const deadline = Date.now() + 3500;
+      while (Date.now() < deadline) {
+        await new Promise(requestAnimationFrame);
+        const canvas = document.querySelector("#film-canvas");
+        const frame = Number(canvas.dataset.frame);
+        const target = Number(canvas.dataset.targetFrame);
+        const key = `${frame}:${target}`;
+        if (key !== previousKey) {
+          trace.push({ frame, target, canvasSize: `${canvas.width}x${canvas.height}` });
+          previousKey = key;
+        }
+        if (Math.abs(target - expected) <= 1 && frame === target) break;
+      }
+      return trace;
+    }, { y: scrollTarget, expected: expectedTarget });
+  }
+
+  const forwardTarget = Math.round((220 - 1) * .72);
+  const forward = await traceTo(range * .72, forwardTarget);
+  const reverse = await traceTo(0, 0);
+  const summarize = (trace) => {
+    const frames = trace.map((entry) => entry.frame).filter((frame, index, values) => index === 0 || frame !== values[index - 1]);
+    const deltas = frames.slice(1).map((frame, index) => Math.abs(frame - frames[index]));
+    return {
+      frames,
+      distinctFrames: new Set(frames).size,
+      maxFrameStep: deltas.length ? Math.max(...deltas) : 0,
+      canvasSizes: [...new Set(trace.map((entry) => entry.canvasSize))],
+      final: trace.at(-1)
+    };
+  };
+  const forwardSummary = summarize(forward);
+  const reverseSummary = summarize(reverse);
+  assert(forwardSummary.distinctFrames >= 30, `HD film did not present enough forward intermediate frames: ${JSON.stringify(forwardSummary)}`);
+  assert(forwardSummary.maxFrameStep <= 6, `HD film skipped forward frames: ${JSON.stringify(forwardSummary)}`);
+  assert(reverseSummary.distinctFrames >= 30, `HD film did not present enough reverse intermediate frames: ${JSON.stringify(reverseSummary)}`);
+  assert(reverseSummary.maxFrameStep <= 6, `HD film skipped reverse frames: ${JSON.stringify(reverseSummary)}`);
+  assert(forwardSummary.canvasSizes.length === 1 && reverseSummary.canvasSizes.length === 1, `HD film canvas was reallocated during its scale animation: ${JSON.stringify({ forwardSummary, reverseSummary })}`);
+  assert(forwardSummary.final?.frame === forwardSummary.final?.target, `HD film did not settle on its forward target: ${JSON.stringify(forwardSummary.final)}`);
+  assert(reverseSummary.final?.frame === 0 && reverseSummary.final?.target === 0, `HD film did not settle on its opening frame: ${JSON.stringify(reverseSummary.final)}`);
+  await page.close();
+  return { forward: forwardSummary, reverse: reverseSummary };
 }
 
 async function inspectMediumFilmRecovery(browser) {
@@ -265,9 +327,10 @@ async function inspectDecoderFallback(browser) {
     const tallHd = results.find((result) => result.viewport === "1424x1180");
     assert(tallHd?.canvas.edgeFeather === "active", `1424x1180: HD letterbox edges are not feathered into the hero background`);
     const scrollFilm = await inspectScrollFilm(browser);
+    const hdContinuousPlayback = await inspectHdContinuousPlayback(browser);
     const mediumFilmRecovery = await inspectMediumFilmRecovery(browser);
     const decoderFallback = await inspectDecoderFallback(browser);
-    console.log(JSON.stringify({ pass: true, results, scrollFilm, mediumFilmRecovery, decoderFallback }, null, 2));
+    console.log(JSON.stringify({ pass: true, results, scrollFilm, hdContinuousPlayback, mediumFilmRecovery, decoderFallback }, null, 2));
   } finally {
     await browser.close();
   }
