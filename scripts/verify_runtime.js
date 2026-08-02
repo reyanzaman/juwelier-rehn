@@ -118,7 +118,10 @@ async function inspect(browser, width, height, reducedMotion = false) {
   assert(state.brandLogos.every((logo) => logo.complete && logo.width > 0), `${width}x${height}: a watch-brand logo did not load`);
   assert(state.storyImages.length === 2 && state.storyImages.every((image) => image.complete && image.width > 0 && image.alt), `${width}x${height}: an editorial product image did not load`);
   assert(state.storyButtons === 0, `${width}x${height}: detail controls are still present`);
-  if (!reducedMotion) assert(storyMotion.every(({ before, after }) => before && after && before !== after), `${width}x${height}: an editorial image is not responding to scroll: ${JSON.stringify(storyMotion)}`);
+  if (!reducedMotion) {
+    assert(storyMotion.every(({ before, after }) => before && after && before !== after), `${width}x${height}: an editorial image is not responding to scroll: ${JSON.stringify(storyMotion)}`);
+    assert(storyMotion.every(({ before, after }) => Number(before.match(/matrix\(([^,]+)/)?.[1]) > Number(after.match(/matrix\(([^,]+)/)?.[1])), `${width}x${height}: an editorial image is not zooming out with scroll: ${JSON.stringify(storyMotion)}`);
+  }
   assert(activeNavigation === "#leistungen", `${width}x${height}: navigation did not highlight the current section`);
   assert(state.scrollTriggers === 0, `${width}x${height}: scrubbed ScrollTriggers should remain disabled for native-scroll smoothness`);
   assert(!state.visibleNumbers, `${width}x${height}: section numbering is still visible`);
@@ -145,16 +148,45 @@ async function inspectScrollFilm(browser) {
   await page.goto(playbackUrl.href, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.waitForFunction("window.__ready === true", { timeout: 15000 });
   const range = await page.$eval("#film", (section) => section.getBoundingClientRect().height - innerHeight);
-  await page.evaluate((y) => scrollTo(0, y), range * .52);
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  const forward = await page.evaluate(() => window.__filmState());
+  const checkpoints = [];
+  for (const progress of [.1, .24, .4, .56, .72, .9]) {
+    await page.evaluate((y) => scrollTo(0, y), range * progress);
+    await new Promise((resolve) => setTimeout(resolve, 240));
+    checkpoints.push(await page.evaluate(() => window.__filmState()));
+  }
+  const forward = checkpoints.at(-1);
   await page.evaluate(() => scrollTo(0, 0));
-  await new Promise((resolve) => setTimeout(resolve, 1200));
+  await new Promise((resolve) => setTimeout(resolve, 360));
   const reverse = await page.evaluate(() => window.__filmState());
-  assert(forward.targetFrame > 90 && forward.frame > 70, `scroll film did not advance: ${JSON.stringify(forward)}`);
+  const displayedFrames = checkpoints.map((state) => state.frame);
+  const distinctFrames = new Set(displayedFrames).size;
+  assert(distinctFrames >= 5, `scroll film did not visibly advance through enough frames: ${JSON.stringify(checkpoints)}`);
+  assert(displayedFrames.every((frame, index) => index === 0 || frame > displayedFrames[index - 1]), `scroll film frames did not advance monotonically: ${JSON.stringify(displayedFrames)}`);
+  assert(forward.targetFrame > 180 && forward.frame > 170, `scroll film did not reach its final movement: ${JSON.stringify(forward)}`);
   assert(reverse.targetFrame === 0 && reverse.frame < 12, `scroll film did not reverse to its opening: ${JSON.stringify(reverse)}`);
   await page.close();
-  return { forward, reverse };
+  return { checkpoints, forward, reverse };
+}
+
+async function inspectDecoderFallback(browser) {
+  const page = await browser.newPage();
+  const playbackUrl = new URL(url);
+  playbackUrl.search = "?jump=0";
+  playbackUrl.hash = "film";
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(window, "createImageBitmap", { configurable: true, value: undefined });
+  });
+  await page.goto(playbackUrl.href, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForFunction("window.__ready === true", { timeout: 15000 });
+  const range = await page.$eval("#film", (section) => section.getBoundingClientRect().height - innerHeight);
+  await page.evaluate((y) => scrollTo(0, y), range * .52);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const state = await page.evaluate(() => window.__filmState());
+  assert(state.decoder === "image-element", `film decoder fallback did not activate: ${JSON.stringify(state)}`);
+  assert(state.ready && state.frame > 80, `film decoder fallback remained static: ${JSON.stringify(state)}`);
+  await page.close();
+  return state;
 }
 
 (async () => {
@@ -166,7 +198,8 @@ async function inspectScrollFilm(browser) {
     results.push(await inspect(browser, 390, 844));
     results.push(await inspect(browser, 390, 844, true));
     const scrollFilm = await inspectScrollFilm(browser);
-    console.log(JSON.stringify({ pass: true, results, scrollFilm }, null, 2));
+    const decoderFallback = await inspectDecoderFallback(browser);
+    console.log(JSON.stringify({ pass: true, results, scrollFilm, decoderFallback }, null, 2));
   } finally {
     await browser.close();
   }

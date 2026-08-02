@@ -385,6 +385,11 @@
   const heroBeats = [...document.querySelectorAll(".hero-beat")];
   const filmMobile = window.matchMedia("(max-width: 760px)");
   const FILM_FRAME_COUNT = 220;
+  const FILM_ANCHOR_STEP = 18;
+  const filmAnchorFrames = new Set([
+    ...Array.from({ length: Math.ceil((FILM_FRAME_COUNT - 1) / FILM_ANCHOR_STEP) + 1 }, (_, index) => Math.min(index * FILM_ANCHOR_STEP, FILM_FRAME_COUNT - 1)),
+    FILM_FRAME_COUNT - 1
+  ]);
   const filmBitmaps = new Map();
   const filmDecoding = new Map();
   const filmQueued = new Set();
@@ -397,11 +402,35 @@
   let filmProgress = 0;
   let filmScrubFrame = 0;
   let filmReady = false;
+  let filmDecoderMode = typeof createImageBitmap === "function" ? "image-bitmap" : "image-element";
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const mix = (from, to, progress) => from + (to - from) * progress;
 
   const filmFrameUrl = (index) => `./assets/film-frames/${filmMobile.matches ? "mobile" : "desktop"}/f_${String(index + 1).padStart(4, "0")}.webp`;
+
+  function releaseFilmFrame(frame) {
+    if (typeof frame?.close === "function") frame.close();
+  }
+
+  function decodeFilmBlob(blob) {
+    if (typeof createImageBitmap === "function") return createImageBitmap(blob);
+    filmDecoderMode = "image-element";
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(image);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Film frame decode failed"));
+      };
+      image.src = url;
+    });
+  }
 
   function sizeFilmCanvas() {
     const rect = filmCanvas.getBoundingClientRect();
@@ -439,7 +468,7 @@
     filmContext.clearRect(0, 0, cw, ch);
     const mobile = filmMobile.matches;
     const scale = mobile
-      ? (cw / bitmap.width) * 1.18
+      ? (cw / bitmap.width) * 1.12
       : Math.max(cw / bitmap.width, ch / bitmap.height);
     const width = bitmap.width * scale;
     const height = bitmap.height * scale;
@@ -464,15 +493,18 @@
         if (!response.ok) throw new Error(`Film frame ${safeIndex + 1} failed`);
         return response.blob();
       })
-      .then((blob) => createImageBitmap(blob))
+      .then((blob) => decodeFilmBlob(blob))
       .then((bitmap) => {
         filmDecoding.delete(safeIndex);
         if (generation !== filmGeneration) {
-          bitmap.close();
+          releaseFilmFrame(bitmap);
           return null;
         }
         filmBitmaps.set(safeIndex, bitmap);
-        if (Math.abs(safeIndex - filmTargetFrame) < 2 || !filmReady) drawFilmFrame(safeIndex, true);
+        const displayedDistance = filmDisplayedFrame < 0 ? Infinity : Math.abs(filmDisplayedFrame - filmCurrentFrame);
+        if (Math.abs(safeIndex - filmCurrentFrame) < displayedDistance || Math.abs(safeIndex - filmTargetFrame) < 2 || !filmReady) {
+          drawFilmFrame(filmCurrentFrame, true);
+        }
         return bitmap;
       })
       .catch(() => {
@@ -496,13 +528,24 @@
     }
   }
 
+  function queueFilmAnchors(center) {
+    [...filmAnchorFrames]
+      .sort((a, b) => Math.abs(a - center) - Math.abs(b - center))
+      .forEach((index) => {
+        if (filmBitmaps.has(index) || filmDecoding.has(index) || filmQueued.has(index)) return;
+        filmQueued.add(index);
+        filmLoadQueue.push(index);
+      });
+    pumpFilmQueue();
+  }
+
   function ensureFilmBitmaps(center) {
     const rounded = clamp(Math.round(center), 0, FILM_FRAME_COUNT - 1);
     const ahead = 30;
     const keep = 46;
     const low = Math.max(0, rounded - ahead);
     const high = Math.min(FILM_FRAME_COUNT - 1, rounded + ahead);
-    filmLoadQueue = filmLoadQueue.filter((index) => Math.abs(index - rounded) <= keep);
+    filmLoadQueue = filmLoadQueue.filter((index) => filmAnchorFrames.has(index) || Math.abs(index - rounded) <= keep);
     filmQueued.clear();
     filmLoadQueue.forEach((index) => filmQueued.add(index));
     for (let offset = 0; offset <= ahead; offset += 1) {
@@ -515,15 +558,15 @@
     }
     pumpFilmQueue();
     [...filmBitmaps.keys()].forEach((index) => {
-      if (Math.abs(index - rounded) <= keep) return;
-      filmBitmaps.get(index).close();
+      if (filmAnchorFrames.has(index) || Math.abs(index - rounded) <= keep) return;
+      releaseFilmFrame(filmBitmaps.get(index));
       filmBitmaps.delete(index);
     });
   }
 
   function tickFilmScrub() {
     filmScrubFrame = 0;
-    filmCurrentFrame += (filmTargetFrame - filmCurrentFrame) * .19;
+    filmCurrentFrame += (filmTargetFrame - filmCurrentFrame) * .24;
     if (Math.abs(filmTargetFrame - filmCurrentFrame) < .08) filmCurrentFrame = filmTargetFrame;
     ensureFilmBitmaps(filmTargetFrame);
     drawFilmFrame(filmCurrentFrame);
@@ -570,8 +613,8 @@
     if (!prefersReducedMotion.matches) {
       const cameraEase = filmProgress * filmProgress * (3 - 2 * filmProgress);
       const mobile = window.innerWidth <= 760;
-      const cameraScale = 1 + cameraEase * (mobile ? .048 : .058);
-      const cameraY = cameraEase * (mobile ? -15 : -22);
+      const cameraScale = mix(mobile ? 1.025 : 1.035, 1, cameraEase);
+      const cameraY = mix(mobile ? 4 : 6, mobile ? -3 : -4, cameraEase);
       filmCanvas.style.transform = `translate3d(0,${cameraY.toFixed(2)}px,0) scale(${cameraScale.toFixed(4)})`;
     } else {
       filmCanvas.style.transform = "none";
@@ -590,7 +633,7 @@
 
   filmMobile.addEventListener("change", () => {
     filmGeneration += 1;
-    filmBitmaps.forEach((bitmap) => bitmap.close());
+    filmBitmaps.forEach((bitmap) => releaseFilmFrame(bitmap));
     filmBitmaps.clear();
     filmDecoding.clear();
     filmLoadQueue = [];
@@ -600,6 +643,7 @@
     filmCanvas.classList.remove("is-ready");
     sizeFilmCanvas();
     loadFilmBitmap(Math.round(filmTargetFrame)).then(() => {
+      queueFilmAnchors(filmTargetFrame);
       ensureFilmBitmaps(filmTargetFrame);
       drawFilmFrame(filmTargetFrame, true);
     });
@@ -642,11 +686,12 @@
       const mobile = window.innerWidth <= 760;
       const isWatch = feature.classList.contains("story-watch");
       const storyX = 0;
-      const zoomWave = Math.sin(progress * Math.PI);
       const storyY = isWatch
-        ? mix(mobile ? 116 : 148, mobile ? -112 : -144, progress)
-        : mix(mobile ? 126 : 158, mobile ? -122 : -154, progress);
-      const storyScale = (mobile ? 1.15 : 1.11) + zoomWave * (isWatch ? (mobile ? .23 : .21) : (mobile ? .25 : .23));
+        ? mix(mobile ? 30 : 38, mobile ? -22 : -28, progress)
+        : mix(mobile ? 34 : 42, mobile ? -24 : -30, progress);
+      const storyScale = isWatch
+        ? mix(mobile ? 1.26 : 1.24, mobile ? 1.07 : 1.06, progress)
+        : mix(mobile ? 1.28 : 1.26, mobile ? 1.08 : 1.06, progress);
       const storyRotate = isWatch
         ? mix(mobile ? .8 : 1.05, mobile ? -.65 : -.8, progress)
         : mix(mobile ? -.35 : -.55, mobile ? .24 : .38, progress);
@@ -700,7 +745,12 @@
     });
   };
   updateHeader();
-  window.addEventListener("scroll", scheduleHeaderUpdate, { passive: true });
+  let filmSettleTimer = 0;
+  window.addEventListener("scroll", () => {
+    scheduleHeaderUpdate();
+    window.clearTimeout(filmSettleTimer);
+    filmSettleTimer = window.setTimeout(() => updateFilmProgress(true), 90);
+  }, { passive: true });
 
   const sectionObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -855,6 +905,8 @@
     targetFrame: Math.round(filmTargetFrame),
     progress: filmProgress,
     frameCount: FILM_FRAME_COUNT,
+    loadedFrames: filmBitmaps.size,
+    decoder: filmDecoderMode,
     mobileFrames: filmMobile.matches,
     reducedMotion: prefersReducedMotion.matches
   });
@@ -863,6 +915,7 @@
     sizeFilmCanvas();
     updateFilmProgress(true);
     await loadFilmBitmap(Math.round(filmTargetFrame));
+    queueFilmAnchors(filmTargetFrame);
     ensureFilmBitmaps(filmTargetFrame);
     drawFilmFrame(filmTargetFrame, true);
   }

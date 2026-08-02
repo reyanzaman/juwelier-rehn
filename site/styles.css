@@ -1242,6 +1242,8 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
   pointer-events:none;
   -webkit-mask-image:radial-gradient(ellipse 76% 82% at 69% 52%,#000 0%,#000 53%,rgba(0,0,0,.91) 66%,rgba(0,0,0,.36) 80%,transparent 96%);
   mask-image:radial-gradient(ellipse 76% 82% at 69% 52%,#000 0%,#000 53%,rgba(0,0,0,.91) 66%,rgba(0,0,0,.36) 80%,transparent 96%);
+  transform:scale(1.035);
+  transform-origin:64% 52%;
 }
 .film-poster img{
   width:100%;
@@ -1300,13 +1302,15 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
     inset:-3px;
     -webkit-mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.28) 4%,rgba(0,0,0,.74) 10%,#000 16%,#000 94%,transparent 100%);
     mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.28) 4%,rgba(0,0,0,.74) 10%,#000 16%,#000 94%,transparent 100%);
+    transform:scale(1.025);
+    transform-origin:50% 58%;
   }
   .film-poster img{
     position:absolute;
     left:50%;
     top:58%;
-    width:118vw;
-    height:118vw;
+    width:112vw;
+    height:112vw;
     transform:translate3d(-50%,-50%,0);
     object-fit:cover;
     object-position:center;
@@ -1473,6 +1477,14 @@ noscript{display:block;padding:12px 24px;background:var(--ink);color:#fff;font-s
   .consultation-trigger i::before,.consultation-trigger i::after{left:9px;top:14px;width:10px}
   .consultation-topics li.is-open .consultation-detail>p{padding:0 28px 22px 0;font-size:13px}
   .materials-list>div.is-selected .material-detail>p{padding:0 34px 22px 0;font-size:13px}
+  .story-media img,
+  .story-watch .story-media img{
+    top:0;
+    height:100%;
+    object-fit:contain;
+    object-position:center 28%;
+    background:#f8f3ec;
+  }
 }
 
 @media (prefers-reduced-motion:reduce){
